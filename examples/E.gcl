@@ -1,0 +1,5 @@
+E(x:int | y:int){
+  assume 1<x ;
+  while 0<x do{ x:=x-1 } ; y:=x ;
+  assert y=1
+}

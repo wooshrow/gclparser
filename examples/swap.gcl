@@ -1,0 +1,12 @@
+swap(i:int, j:int | a:[]int) {
+  assume (0<#a) && (0<=i) && (i<#a) && (0<=j) && (j<#a) ;
+  var oldiVal:int, oldjVal:int, tmp:int {
+      oldiVal := a[i] ;
+      oldjVal := a[j] ;
+        
+      tmp  := a[i] ; 
+      a[i] := a[j] ;
+      a[j] := tmp ;
+      assert (a[i] = oldjVal) && (a[j] = oldiVal)
+  }
+}
