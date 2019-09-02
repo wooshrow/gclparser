@@ -120,7 +120,6 @@ PPrimitiveType :: { PrimitiveType }
 
 PStatements :: { Stmt }
              : PStatements semicolon PStatements { Seq $1 $3 }
-             | try copen PStatement cclose catch copen PStatement cclose { TryCatch $3 $7 }
              | PStatement                        { $1 }
 
 --PArguments :: { [Expr] }
@@ -135,6 +134,7 @@ PStatement  :: { Stmt }
              | if PExpr then copen PStatements cclose else copen PStatements cclose { IfThenElse $2 $5 $9 }
              | while PExpr do copen PStatements cclose                { While $2 $5 }
              | var PVarDeclarations copen PStatements cclose          { Block $2 $4 }
+             | try copen PStatement cclose catch copen PStatement cclose { TryCatch $3 $7 }
              | identifier sopen PExpr sclose assign PExpr             { AAssign $1 $3 $6 }
              | identifier assign PExpr                                { Assign $1 $3 }
 --           | popen PIdentifiers pclose assign identifier popen PArguments pclose { Call $2 $7 $5 }
@@ -168,7 +168,7 @@ PExpr :: { Expr }
        | PExpr divide PExpr                             { opDivide $1 $3 }
        | PExpr multiply PExpr                           { opMultiply $1 $3 }
        | PExpr alias PExpr                              { opAlias $1 $3 }
-       | new PExpr                                      { NewStore $2 }
+       | new popen PExpr pclose                         { NewStore $3 }
        | null                                           { LitNull }
        | identifier dot val                             { Dereference $1 }
        
