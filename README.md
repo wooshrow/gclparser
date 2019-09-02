@@ -17,6 +17,9 @@ To compile the library, run the command `cabal build`.
 
 #### Usage
 
+#### Supported syntax
+
+See in `/docs`.
 
 #### Credits
 
