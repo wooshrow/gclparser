@@ -1,6 +1,6 @@
 module Parsing.GCL where
     
-import Data.List
+-- import Data.List
 
 type Verbose = Bool
 
@@ -66,6 +66,7 @@ instance Show Stmt where
     show (IfThenElse gaurd s1 s2) = "if " ++ show gaurd ++ " then " ++ show s1 ++ " else " ++ show s2
     show (While gaurd s)          = "while " ++ show gaurd ++ " do {" ++ show s ++ "}"
     show (Block vars s)           = "var " ++ show vars ++ " {" ++ show s ++ "}"
+    show (TryCatch s1 s2)         = "try { " ++ show s1 ++ " } catch { " ++ show s2 ++ " }"
 --    show (Call vars args f)       = "(" ++ intercalate "," vars ++ ") := " ++ "(" ++ (intercalate "," . map show) args ++ ")"
     
 -----------------------------------------------------------------------------
@@ -86,6 +87,7 @@ data Expr
     | RepBy              String Expr   Expr
     | Cond               Expr   Expr   Expr
     | NewStore           Expr
+    | Dereference        String
     deriving (Eq) 
     
 data BinOp = And | Or | Implication 
@@ -94,19 +96,33 @@ data BinOp = And | Or | Implication
     | Alias
     deriving (Eq)
 
+opAnd :: Expr -> Expr -> Expr
 opAnd = BinopExpr And
+opOr :: Expr -> Expr -> Expr
 opOr  = BinopExpr Or
-opImplication   = BinopExpr Implication
-opLessThan      = BinopExpr LessThan
+opImplication :: Expr -> Expr -> Expr
+opImplication = BinopExpr Implication
+opLessThan :: Expr -> Expr -> Expr
+opLessThan = BinopExpr LessThan
+opLessThanEqual :: Expr -> Expr -> Expr
 opLessThanEqual = BinopExpr LessThanEqual
+opGreaterThan :: Expr -> Expr -> Expr
 opGreaterThan   = BinopExpr GreaterThan
+opGreaterThanEqual :: Expr -> Expr -> Expr
 opGreaterThanEqual = BinopExpr GreaterThanEqual
-opEqual    = BinopExpr Equal
-opMinus    = BinopExpr Minus
-opPlus     = BinopExpr Plus
+opEqual :: Expr -> Expr -> Expr
+opEqual = BinopExpr Equal
+opMinus :: Expr -> Expr -> Expr
+opMinus = BinopExpr Minus
+opPlus :: Expr -> Expr -> Expr
+opPlus = BinopExpr Plus
+opMultiply :: Expr -> Expr -> Expr
 opMultiply = BinopExpr Multiply
-opDivide   = BinopExpr Divide
+opDivide :: Expr -> Expr -> Expr
+opDivide = BinopExpr Divide
+opAlias :: Expr -> Expr -> Expr
 opAlias    = BinopExpr Alias
+exists_ :: String -> Expr -> Expr
 exists_ i p = OpNeg (Forall i (OpNeg p))
     
 instance Show Expr where
@@ -114,22 +130,26 @@ instance Show Expr where
     show (LitI x)                   = show x
     show (LitB True)                = "true"
     show (LitB False)               = "false"
+    show LitNull                    = "null"
+    show (Dereference u)            = u ++ ".val"
     show (Parens e)                 = "(" ++ show e ++ ")"
     show (ArrayElem var index)      = var ++ "[" ++ show index ++ "]"
     show (OpNeg expr)               = "~" ++ show expr
     show (BinopExpr And e1 e2)              = show e1 ++ " && " ++ show e2
     show (BinopExpr Or e1 e2)               = show e1 ++ " || " ++ show e2
     show (BinopExpr Implication e1 e2)      = show e1 ++ " ==> " ++ show e2
-    show (BinopExpr LessThan e1 e2)         = show e1 ++ "<" ++ show e2
-    show (BinopExpr LessThanEqual e1 e2)    = show e1 ++ "<=" ++ show e2
-    show (BinopExpr GreaterThan e1 e2)      = show e1 ++ ">" ++ show e2
-    show (BinopExpr GreaterThanEqual e1 e2) = show e1 ++ ">=" ++ show e2
-    show (BinopExpr Equal e1 e2)            = show e1 ++ "=" ++ show e2
-    show (BinopExpr Minus e1 e2)            = show e1 ++ "-" ++ show e2
-    show (BinopExpr Plus e1 e2)             = show e1 ++ "+" ++ show e2
-    show (BinopExpr Divide e1 e2)           = show e1 ++ "/" ++ show e2
-    show (BinopExpr Multiply e1 e2)         = show e1 ++ "*" ++ show e2
-    show (Forall var pred)          = "forall " ++ var ++ " :: " ++ show pred
+    show (BinopExpr LessThan e1 e2)         = show e1 ++ " < " ++ show e2
+    show (BinopExpr LessThanEqual e1 e2)    = show e1 ++ " <= " ++ show e2
+    show (BinopExpr GreaterThan e1 e2)      = show e1 ++ " > " ++ show e2
+    show (BinopExpr GreaterThanEqual e1 e2) = show e1 ++ " >= " ++ show e2
+    show (BinopExpr Equal e1 e2)            = show e1 ++ " = " ++ show e2
+    show (BinopExpr Minus e1 e2)            = show e1 ++ " - " ++ show e2
+    show (BinopExpr Plus e1 e2)             = show e1 ++ " + " ++ show e2
+    show (BinopExpr Divide e1 e2)           = show e1 ++ " / " ++ show e2
+    show (BinopExpr Multiply e1 e2)         = show e1 ++ " * " ++ show e2
+    show (BinopExpr Alias e1 e2)            = show e1 ++ " == " ++ show e2
+    show (NewStore e)               = "new " ++ show e
+    show (Forall var p)             = "forall " ++ var ++ ":: " ++ show p
     show (SizeOf var)               = "#" ++ var
     show (RepBy var i val)          = var ++ "(" ++ show i ++ " repby " ++ show val ++ ")"
     show (Cond g e1 e2)             = "(" ++ show g ++ "->" ++ show e1 ++ "|" ++ show e2 ++ ")"

@@ -47,16 +47,18 @@ tokens :-
     "||"                            {\s -> TOr }
     "==>"                           {\s -> TImplication }
     "="                             {\s -> TEqual }
-    "~"                             {\s -> TAlias }    
+    "=="                            {\s -> TAlias }    
     "<"                             {\s -> TLessThan }
     "<="                            {\s -> TLessThanEqual }
     ">"                             {\s -> TGreaterThan }
     ">="                            {\s -> TGreaterThanEqual }
     ","                             {\s -> TComma }
+    "."                             {\s -> TDot }
     "forall"                        {\s -> TForall }
     "exists"                        {\s -> TExists }
     "|"                             {\s -> TBar }
     "null"                          {\s -> TNull }
+    "val"                           {\s -> TVal } 
     "new"                           {\s -> TNew }
     "ref"                           {\s -> TRef }
     "int"                           {\s -> TInt }

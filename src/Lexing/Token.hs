@@ -45,10 +45,12 @@ data Token
     | TGreaterThan
     | TGreaterThanEqual
     | TComma
+    | TDot
     | TBar
     | TForall
     | TExists
     | TInt
     | TBool
     | TRef
+    | TVal
     deriving (Show)

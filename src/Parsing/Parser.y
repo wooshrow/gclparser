@@ -54,6 +54,7 @@ import Debug.Trace
     greaterthan      { TGreaterThan      }
     greaterthanequal { TGreaterThanEqual }
     comma            { TComma            }
+    dot              { TDot              }
     bar              { TBar              }
     forall           { TForall           }
     exists           { TExists           }
@@ -63,6 +64,7 @@ import Debug.Trace
     ref              { TRef              }
     new              { TNew              }
     null             { TNull             }
+    val              { TVal              }
     alias            { TAlias            }
 
 
@@ -168,6 +170,7 @@ PExpr :: { Expr }
        | PExpr alias PExpr                              { opAlias $1 $3 }
        | new PExpr                                      { NewStore $2 }
        | null                                           { LitNull }
+       | identifier dot val                             { Dereference $1 }
        
        
 -- I suppress the introduction of fresh name here. You should decide it yourself.       
