@@ -12,12 +12,11 @@ build-type:          Simple
 extra-source-files:  ChangeLog.md, README.md
 cabal-version:       >=1.10
 
-executable MyGCLp
-  main-is:             Main.hs
-  other-modules:       Lexing.Token
-                     , Lexing.Lexer
-                     , Parsing.GCL
-                     , Parsing.Parser
+Library
+  exposed-modules:     GCLParser.Parser
+                     , GCLParser.GCLDatatype
+                     , GCLLexer.Token
+                     , GCLLexer.Lexer
 --                     , PrettyPrint
   -- other-extensions:    
   build-depends:       base   >= 4.10 

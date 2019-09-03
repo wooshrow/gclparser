@@ -1,10 +1,10 @@
 {
 {-# OPTIONS_GHC -w #-}
-module Parsing.Parser where
+module GCLParser.Parser where
 
-import Lexing.Lexer
-import Lexing.Token
-import Parsing.GCL
+import GCLLexer.Lexer
+import GCLLexer.Token
+import GCLParser.GCLDatatype
 
 import Debug.Trace
 }
@@ -198,4 +198,14 @@ rename new old (Var x)
 
 parseError :: [Token] -> ParseResult a
 parseError tokens = Left $ "Failed to parse from: " ++ show tokens
+
+-- Parse a string containing a GCL program
+parseGCLstring :: String -> ParseResult Program
+parseGCLstring str = parseGCL . lexer $ str
+    
+-- Parse a GCL program from a text file    
+parseGCLfile :: FilePath -> IO (ParseResult Program)
+parseGCLfile path = do
+    file <- readFile path
+    return . parseGCL . lexer $ file
 }

@@ -1,11 +1,11 @@
 {
 {-# OPTIONS_GHC -w #-}
-module Lexing.Lexer(
+module GCLLexer.Lexer(
       lexer
     , Token(..)
 ) where
 
-import Lexing.Token
+import GCLLexer.Token
 }
 
 %wrapper "basic"

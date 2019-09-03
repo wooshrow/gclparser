@@ -2,7 +2,7 @@
 
 The syntax of the GCL as accepted by the parser provided by this library is described below. It is a slightly richer syntax than the basic GCL so that we can accommodate optional assignments. You can ignore the parts that you don't need.
 
-Additionally, for your convenience, the internal data-type (see the file `src/Parsing/GCL.hs`) representing GCL's abstract syntax tree also has a representation for repby-expression and conditional expression. 
+Additionally, for your convenience, the internal data-type (see the file `src/Parsing/GCL.hs`) representing GCL's abstract syntax tree also has a representation for repby-expression and conditional expression.
 
 
 #### Program and statement
@@ -16,7 +16,7 @@ _Parameter_  ::= Name `:` Type
 _Stmt_ ::=
 * _BasicStmt_
 * _BasicStmt_ `;` _Stmt_
-* `if` _Expr_ `then` _Stmt_ `else` _Stmt_
+* `if` _Expr_ `then` `{` _Stmt_ `} else {` _Stmt_ `}`
 * `while` _Expr_ `do` `{` _Stmt_ `}`
 * `var` _VarDecls_  `{` _Stmt_ `}`
 
@@ -24,7 +24,7 @@ _Stmt_ ::=
 
    _VarDecl_ ::= _Name_ `:` _Type_
 
-* `try {` _Stmt_ `} catch {` _Stmt_ `}`
+* `try {` _Stmt_ `} catch(` _Name_ `) {` _Stmt_ `}`
 
 _BasicStmt_ ::=
 * `skip`

@@ -1,4 +1,4 @@
-module Parsing.GCL where
+module GCLParser.GCLDatatype where
     
 -- import Data.List
 
