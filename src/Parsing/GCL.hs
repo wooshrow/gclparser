@@ -53,7 +53,7 @@ data Stmt
     | IfThenElse Expr             Stmt   Stmt     
     | While      Expr             Stmt   
     | Block      [VarDeclaration] Stmt   
-    | TryCatch   Stmt             Stmt
+    | TryCatch   String           Stmt   Stmt
 --    | Call       [String]         [Expr] String
 
 instance Show Stmt where
@@ -66,7 +66,7 @@ instance Show Stmt where
     show (IfThenElse gaurd s1 s2) = "if " ++ show gaurd ++ " then " ++ show s1 ++ " else " ++ show s2
     show (While gaurd s)          = "while " ++ show gaurd ++ " do {" ++ show s ++ "}"
     show (Block vars s)           = "var " ++ show vars ++ " {" ++ show s ++ "}"
-    show (TryCatch s1 s2)         = "try { " ++ show s1 ++ " } catch { " ++ show s2 ++ " }"
+    show (TryCatch e s1 s2)         = "try { " ++ show s1 ++ " } catch(" ++ e ++ "){ " ++ show s2 ++ " }"
 --    show (Call vars args f)       = "(" ++ intercalate "," vars ++ ") := " ++ "(" ++ (intercalate "," . map show) args ++ ")"
     
 -----------------------------------------------------------------------------
