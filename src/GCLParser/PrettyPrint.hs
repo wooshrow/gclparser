@@ -29,6 +29,7 @@ ppStmt Skip                 = text "skip"
 ppStmt (Assert e)           = text "assert " <> ppExpr e 
 ppStmt (Assume e)           = text "assume " <> ppExpr e 
 ppStmt (Assign x e)         = text x <> text " := " <> ppExpr e
+ppStmt (DrefAssign x e)     = text x <> text ".val := " <> ppExpr e
 ppStmt (AAssign x i e)      = text x <> char '[' <> ppExpr i <> char ']' <> text " := " <> ppExpr e
 ppStmt (Seq s1 s2)          = ppStmt s1 <> char ';' $+$ ppStmt s2
 ppStmt (IfThenElse g s1 s2) =   text "if " <> ppExpr g <> text " then {"

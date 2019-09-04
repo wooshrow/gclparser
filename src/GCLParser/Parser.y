@@ -68,15 +68,15 @@ import Debug.Trace
     alias            { TAlias            }
 
 
-%nonassoc lessthan lessthanequal greaterthan greaterthanequal
+%left implication
+%left or and 
+
+%nonassoc alias equal
+%nonassoc lessthan lessthanequal greaterthan greaterthanequal 
 
 %left plus minus
 %left multiply divide
 
-%left and or
-
-%left implication
-%left equal
 %%
 
 -- | Program parsing
@@ -137,6 +137,7 @@ PStatement  :: { Stmt }
              | try copen PStatement cclose catch popen identifier pclose copen PStatement cclose { TryCatch $7 $3 $10 }
              | identifier sopen PExpr sclose assign PExpr             { AAssign $1 $3 $6 }
              | identifier assign PExpr                                { Assign $1 $3 }
+             | identifier dot val assign PExpr                        { DrefAssign $1 $5 }
 --           | popen PIdentifiers pclose assign identifier popen PArguments pclose { Call $2 $7 $5 }
 
 PIdentifiers :: { [String] }
@@ -202,13 +203,15 @@ parseError tokens = Left $ "Failed to parse from: " ++ show tokens
 -- Pre-processor to strip out comment; currently only single-line comments are supported.
 -- A comment-line starts with "//"
 stripComment :: String -> String
-stripComment ('/':'/':s) = eatComment s
+stripComment input = unlines . map stripCommentWorker . lines $ input
    where
-   eatComment z@('\n' : s) = z
-   eatComment (x : s) = eatComment s
-   eatComment [] = []
-stripComment (x:s) = x : stripComment s
-stripComment [] = []
+   stripCommentWorker ('/':'/':s) = eatComment s
+      where
+      eatComment z@('\n' : s) = z
+      eatComment (x : s) = eatComment s
+      eatComment [] = []
+   stripCommentWorker (x:s) = x : stripCommentWorker s
+   stripCommentWorker [] = []
 
       
 

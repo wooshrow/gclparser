@@ -60,6 +60,19 @@ _Expr_ ::=
 * _Name_ `.val` // dereference operator
 * `new(` _Expr_ `)` // creating a fresh store containing an int
 
+Priority of the operators are as follows (from low to high):
+
+```
+left-associative: ==>
+left-associative: || , &&
+non-associative: ==, =
+non-associative: <, <= , > , >=
+left-associative: +, -
+left-associative: *, /
+```
+
+So, e.g. `1+2*3` is parsed as `1+(2*3)`, and `x-y-z` is parsed as `(x-y)-z`.
+
 #### Type
 
 _Type_ ::=

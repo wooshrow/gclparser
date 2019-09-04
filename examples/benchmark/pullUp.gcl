@@ -1,1 +1,26 @@
+// This contrived program modifies an array a such that each $a[k+1] is 
+// at least equal to a[k]+1. The post-condition is intentionally set wrong. 
+
+// N is an experiment parameter; replace it with a concrete value.
+
+pullUp(step:int | a:[]int) {
+   // N is an experiment parameter
+   assume #a>=2 && #a>N && step>0 ;
+    
+   if a[0]>a[1] 
+      then { a[1] := a[0] + step }
+      else { skip } ;
+                
+   var k:int {
+     k := 1 ;
+     while k < #a - 1 do {
+       if a[k] > a[k+1] 
+         then { a[k+1] := a[k] + step }
+         else { skip } ;
+       k := k+1
+     }
+   } ;
+   // error; should be >= a[0]+#a-1
+   assert a[#a-1] >= a[0] + #a 
+} 
 

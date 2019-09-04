@@ -49,6 +49,7 @@ data Stmt
     | Assume     Expr             
     | Assign     String           Expr   
     | AAssign    String           Expr   Expr  
+    | DrefAssign String           Expr
     | Seq        Stmt             Stmt   
     | IfThenElse Expr             Stmt   Stmt     
     | While      Expr             Stmt   
@@ -61,6 +62,7 @@ instance Show Stmt where
     show (Assert condition)       = "assert " ++ show condition
     show (Assume condition)       = "assume " ++ show condition
     show (Assign var e)           = var ++ " := " ++ show e 
+    show (DrefAssign var e)       = var ++ ".val := " ++ show e 
     show (AAssign var i e)        = var ++ "[" ++ show i ++ "]" ++ " := " ++ show e
     show (Seq s1 s2)              = show s1 ++ ";" ++ show s2 
     show (IfThenElse gaurd s1 s2) = "if " ++ show gaurd ++ " then " ++ show s1 ++ " else " ++ show s2
@@ -136,7 +138,7 @@ instance Show Expr where
     show (ArrayElem var index)      = var ++ "[" ++ show index ++ "]"
     show (OpNeg (Forall var (OpNeg p))) = "exists " ++ var ++ ":: " ++ show p
     show (OpNeg expr)               = "~" ++ show expr
-    show (BinopExpr op e1 e2)       = show e1 ++ " " ++ show op ++ " " ++ show e2
+    show (BinopExpr op e1 e2)       = "(" ++ show e1 ++ " " ++ show op ++ " " ++ show e2 ++ ")"
     show (NewStore e)               = "new(" ++ show e ++ ")"    
     show (Forall var p)             = "forall " ++ var ++ ":: " ++ show p
     show (SizeOf var)               = "#" ++ var
