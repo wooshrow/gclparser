@@ -199,13 +199,26 @@ rename new old (Var x)
 parseError :: [Token] -> ParseResult a
 parseError tokens = Left $ "Failed to parse from: " ++ show tokens
 
+-- Pre-processor to strip out comment; currently only single-line comments are supported.
+-- A comment-line starts with "//"
+stripComment :: String -> String
+stripComment ('/':'/':s) = eatComment s
+   where
+   eatComment z@('\n' : s) = z
+   eatComment (x : s) = eatComment s
+   eatComment [] = []
+stripComment (x:s) = x : stripComment s
+stripComment [] = []
+
+      
+
 -- Parse a string containing a GCL program
 parseGCLstring :: String -> ParseResult Program
-parseGCLstring str = parseGCL . lexer $ str
+parseGCLstring str = parseGCL . lexer . stripComment $ str
     
 -- Parse a GCL program from a text file    
 parseGCLfile :: FilePath -> IO (ParseResult Program)
 parseGCLfile path = do
     file <- readFile path
-    return . parseGCL . lexer $ file
+    return . parseGCLstring $ file
 }

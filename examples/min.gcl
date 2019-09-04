@@ -1,3 +1,4 @@
+// This returns the minimum of two integer. Supposedly valid.
 min(x:int, y:int | z:int) {
   z := x ;
   if y < x then { z := y } else { skip } ;

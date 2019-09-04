@@ -1,3 +1,6 @@
+// Given non-empty array `a`, this program returns an index of `a` 
+// pointing to a minimum element of `a`. 
+// Supposedly valid.
 minind(a:[]int | r:int) { 
    assume #a > 0 ;
    var min:int, i:int {

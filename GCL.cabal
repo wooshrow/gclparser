@@ -15,9 +15,9 @@ cabal-version:       >=1.10
 Library
   exposed-modules:     GCLParser.Parser
                      , GCLParser.GCLDatatype
+                     , GCLParser.PrettyPrint
                      , GCLLexer.Token
                      , GCLLexer.Lexer
---                     , PrettyPrint
   -- other-extensions:    
   build-depends:       base   >= 4.10 
                      , array

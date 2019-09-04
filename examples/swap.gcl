@@ -1,3 +1,6 @@
+// Given a non-empty array `a`, and two indices `i` and `j`, this 
+// program swaps the content of `a[i]` and `a[j]`.
+
 swap(i:int, j:int | a:[]int) {
   assume (0<#a) && (0<=i) && (i<#a) && (0<=j) && (j<#a) ;
   var oldiVal:int, oldjVal:int, tmp:int {

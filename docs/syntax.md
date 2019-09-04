@@ -4,6 +4,9 @@ The syntax of the GCL as accepted by the parser provided by this library is desc
 
 Additionally, for your convenience, the internal data-type (see the file `src/Parsing/GCL.hs`) representing GCL's abstract syntax tree also has a representation for repby-expression and conditional expression.
 
+#### Comments
+
+Only single-line comments are supported. Comment starts with `//`; all characters after that, until the line-break are ignored.
 
 #### Program and statement
 

@@ -37,7 +37,7 @@ data Program
               name   :: String 
               , input  :: [VarDeclaration]
               , output :: [VarDeclaration]
-              , stat   :: Stmt
+              , stmt   :: Stmt
 --              , procs  :: [Procedure]
 --              , post   :: Expr 
               } 
@@ -134,22 +134,26 @@ instance Show Expr where
     show (Dereference u)            = u ++ ".val"
     show (Parens e)                 = "(" ++ show e ++ ")"
     show (ArrayElem var index)      = var ++ "[" ++ show index ++ "]"
+    show (OpNeg (Forall var (OpNeg p))) = "exists " ++ var ++ ":: " ++ show p
     show (OpNeg expr)               = "~" ++ show expr
-    show (BinopExpr And e1 e2)              = show e1 ++ " && " ++ show e2
-    show (BinopExpr Or e1 e2)               = show e1 ++ " || " ++ show e2
-    show (BinopExpr Implication e1 e2)      = show e1 ++ " ==> " ++ show e2
-    show (BinopExpr LessThan e1 e2)         = show e1 ++ " < " ++ show e2
-    show (BinopExpr LessThanEqual e1 e2)    = show e1 ++ " <= " ++ show e2
-    show (BinopExpr GreaterThan e1 e2)      = show e1 ++ " > " ++ show e2
-    show (BinopExpr GreaterThanEqual e1 e2) = show e1 ++ " >= " ++ show e2
-    show (BinopExpr Equal e1 e2)            = show e1 ++ " = " ++ show e2
-    show (BinopExpr Minus e1 e2)            = show e1 ++ " - " ++ show e2
-    show (BinopExpr Plus e1 e2)             = show e1 ++ " + " ++ show e2
-    show (BinopExpr Divide e1 e2)           = show e1 ++ " / " ++ show e2
-    show (BinopExpr Multiply e1 e2)         = show e1 ++ " * " ++ show e2
-    show (BinopExpr Alias e1 e2)            = show e1 ++ " == " ++ show e2
-    show (NewStore e)               = "new " ++ show e
+    show (BinopExpr op e1 e2)       = show e1 ++ " " ++ show op ++ " " ++ show e2
+    show (NewStore e)               = "new(" ++ show e ++ ")"    
     show (Forall var p)             = "forall " ++ var ++ ":: " ++ show p
     show (SizeOf var)               = "#" ++ var
     show (RepBy var i val)          = var ++ "(" ++ show i ++ " repby " ++ show val ++ ")"
-    show (Cond g e1 e2)             = "(" ++ show g ++ "->" ++ show e1 ++ "|" ++ show e2 ++ ")"
+    show (Cond g e1 e2)             = "(" ++ show g ++ " -> " ++ show e1 ++ " | " ++ show e2 ++ ")"
+    
+instance Show BinOp where
+    show And = "&&"
+    show Or = "||" 
+    show Implication = "==>" 
+    show LessThan = "<"
+    show LessThanEqual = "<=" 
+    show GreaterThan = ">"
+    show GreaterThanEqual = ">="
+    show Equal = "="
+    show Minus = "-" 
+    show Plus = "+"
+    show Multiply = "*"
+    show Divide = "/"
+    show Alias = "=="  
