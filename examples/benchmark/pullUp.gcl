@@ -3,7 +3,7 @@
 
 // N is an experiment parameter; replace it with a concrete value.
 
-pullUp(step:int | a:[]int) {
+pullUp(step:int , a:[]int | b:[]int) {
    // N is an experiment parameter
    assume #a>=2 && #a>N && step>0 ;
     
@@ -20,7 +20,8 @@ pullUp(step:int | a:[]int) {
        k := k+1
      }
    } ;
-   // error; should be >= a[0]+#a-1
-   assert a[#a-1] >= a[0] + #a 
+   b := a ;
+   // error; should be >= b[0]+#b-1
+   assert b[#b-1] >= b[0] + #b
 } 
 
