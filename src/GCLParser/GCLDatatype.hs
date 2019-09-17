@@ -81,12 +81,12 @@ data Expr
     | LitB               Bool    
     | LitNull
     | Parens             Expr    
-    | ArrayElem          String Expr   
+    | ArrayElem          Expr   Expr   
     | OpNeg              Expr    
     | BinopExpr          BinOp  Expr   Expr
     | Forall             String Expr 
-    | SizeOf             String  
-    | RepBy              String Expr   Expr
+    | SizeOf             Expr
+    | RepBy              Expr   Expr   Expr
     | Cond               Expr   Expr   Expr
     | NewStore           Expr
     | Dereference        String
@@ -135,14 +135,14 @@ instance Show Expr where
     show LitNull                    = "null"
     show (Dereference u)            = u ++ ".val"
     show (Parens e)                 = "(" ++ show e ++ ")"
-    show (ArrayElem var index)      = var ++ "[" ++ show index ++ "]"
+    show (ArrayElem var index)      = show var ++ "[" ++ show index ++ "]"
     show (OpNeg (Forall var (OpNeg p))) = "exists " ++ var ++ ":: " ++ show p
     show (OpNeg expr)               = "~" ++ show expr
     show (BinopExpr op e1 e2)       = "(" ++ show e1 ++ " " ++ show op ++ " " ++ show e2 ++ ")"
     show (NewStore e)               = "new(" ++ show e ++ ")"    
     show (Forall var p)             = "forall " ++ var ++ ":: " ++ show p
-    show (SizeOf var)               = "#" ++ var
-    show (RepBy var i val)          = var ++ "(" ++ show i ++ " repby " ++ show val ++ ")"
+    show (SizeOf var)               = "#" ++ show var
+    show (RepBy var i val)          = show var ++ "(" ++ show i ++ " repby " ++ show val ++ ")"
     show (Cond g e1 e2)             = "(" ++ show g ++ " -> " ++ show e1 ++ " | " ++ show e2 ++ ")"
     
 instance Show BinOp where
