@@ -70,6 +70,7 @@ import Debug.Trace
 
 %left implication
 %left or and 
+%left neg
 
 %nonassoc alias equal
 %nonassoc lessthan lessthanequal greaterthan greaterthanequal 
