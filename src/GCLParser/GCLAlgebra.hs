@@ -37,41 +37,41 @@ type GCLExprAlgebra e =
      String -> e)
      
 foldGCLProgram :: GCLProgramAlgebra p s e -> Program -> p
-foldGCLProgram (p1, s1) = fProgram
+foldGCLProgram (f1, f2) = fProgram
     where
-      fProgram (Program name ids ods stmt) = p1 name ids ods (fStmt stmt)
-      fStmt = foldGCLStmt s1
+      fProgram (Program a b c d) = f1 a b c (fStmt d)
+      fStmt = foldGCLStmt f2
 
 foldGCLStmt :: GCLStmtAlgebra s e -> Stmt -> s
-foldGCLStmt (s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, e1) = fStmt
+foldGCLStmt (f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12) = fStmt
     where
-      fStmt Skip = s1
-      fStmt (Assert expr) = s2 (fExpr expr)
-      fStmt (Assume expr) = s3 (fExpr expr)
-      fStmt (Assign name expr) = s4 name (fExpr expr)
-      fStmt (AAssign name index expr) = s5 name (fExpr index) (fExpr expr)
-      fStmt (DrefAssign name expr) = s6 name (fExpr expr)
-      fStmt (Seq stmt1 stmt2) = s7 (fStmt stmt1) (fStmt stmt2)
-      fStmt (IfThenElse expr stmt1 stmt2) = s8 (fExpr expr) (fStmt stmt1) (fStmt stmt2)
-      fStmt (While expr stmt) = s9 (fExpr expr) (fStmt stmt)
-      fStmt (Block ds stmt) = s10 ds (fStmt stmt)
-      fStmt (TryCatch name stmt1 stmt2) = s11 name (fStmt stmt1) (fStmt stmt2)
-      fExpr = foldGCLExpr e1
+      fStmt Skip = f1
+      fStmt (Assert a) = f2 (fExpr a)
+      fStmt (Assume a) = f3 (fExpr a)
+      fStmt (Assign a b) = f4 a (fExpr b)
+      fStmt (AAssign a b c) = f5 a (fExpr b) (fExpr c)
+      fStmt (DrefAssign a b) = f6 a (fExpr b)
+      fStmt (Seq a b) = f7 (fStmt a) (fStmt b)
+      fStmt (IfThenElse a b c) = f8 (fExpr a) (fStmt b) (fStmt c)
+      fStmt (While a b) = f9 (fExpr a) (fStmt b)
+      fStmt (Block a b) = f10 a (fStmt b)
+      fStmt (TryCatch a b c) = f11 a (fStmt b) (fStmt c)
+      fExpr = foldGCLExpr f12
 
 foldGCLExpr :: GCLExprAlgebra e -> Expr -> e
-foldGCLExpr (e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12, e13, e14) = fExpr
+foldGCLExpr (f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14) = fExpr
     where
-      fExpr (Var name) = e1 name
-      fExpr (LitI value) = e2 value
-      fExpr (LitB value) = e3 value
-      fExpr LitNull = e4
-      fExpr (Parens expr) = e5 (fExpr expr)
-      fExpr (ArrayElem expr1 expr2) = e6 (fExpr expr1) (fExpr expr2)
-      fExpr (OpNeg expr) = e7 (fExpr expr)
-      fExpr (BinopExpr op expr1 expr2) = e8 op (fExpr expr1) (fExpr expr2)
-      fExpr (Forall name expr) = e9 name (fExpr expr)
-      fExpr (SizeOf expr) = e10 (fExpr expr)
-      fExpr (RepBy expr1 expr2 expr3) = e11 (fExpr expr1) (fExpr expr2) (fExpr expr3)
-      fExpr (Cond expr1 expr2 expr3) = e12 (fExpr expr1) (fExpr expr2) (fExpr expr3)
-      fExpr (NewStore expr) = e13 (fExpr expr)
-      fExpr (Dereference name) = e14 name
+      fExpr (Var a) = f1 a
+      fExpr (LitI a) = f2 a
+      fExpr (LitB a) = f3 a
+      fExpr LitNull = f4
+      fExpr (Parens a) = f5 (fExpr a)
+      fExpr (ArrayElem a b) = f6 (fExpr a) (fExpr b)
+      fExpr (OpNeg a) = f7 (fExpr a)
+      fExpr (BinopExpr a b c) = f8 a (fExpr b) (fExpr c)
+      fExpr (Forall a b) = f9 a (fExpr b)
+      fExpr (SizeOf a) = f10 (fExpr a)
+      fExpr (RepBy a b c) = f11 (fExpr a) (fExpr b) (fExpr c)
+      fExpr (Cond a b c) = f12 (fExpr a) (fExpr b) (fExpr c)
+      fExpr (NewStore a) = f13 (fExpr a)
+      fExpr (Dereference a) = f14 a
