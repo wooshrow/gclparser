@@ -4,6 +4,7 @@
 module ExamplesOfSemanticFunction where
 
 import GCLParser.GCLDatatype
+import GCLParser.GCLAlgebra
 
 -- a function to collect all variables in a given expression. Expr is a dataype defined
 -- in the module GCLParser.GCLDatatype, representing GCL expressions.
@@ -22,6 +23,24 @@ collectAllVariables (RepBy a e1 e2) = collectAllVariables a ++ collectAllVariabl
 collectAllVariables (Cond g e1 e2)  = collectAllVariables g ++ collectAllVariables e1 ++ collectAllVariables e2
 collectAllVariables (NewStore e)    = collectAllVariables e
 collectAllVariables (Dereference x) = [x]
+
+-- the previous function defined as a fold
+collectAllVariables' :: Expr -> [String]
+collectAllVariables' = foldGCLExpr
+  ((: []),
+   const [],
+   const [],
+   [],
+   id,
+   (++),
+   id,
+   const (++),
+   const id,
+   id,
+   \x y z -> x ++ y ++ z,
+   \x y z -> x ++ y ++ z,
+   id,
+   (: []))
 
 -- a function to collect all free variables in a given expression.
 freeVariables :: Expr -> [String]
@@ -43,3 +62,21 @@ freeVariables (RepBy a e1 e2) = freeVariables a ++ freeVariables e1 ++ freeVaria
 freeVariables (Cond g e1 e2)  = freeVariables g ++ freeVariables e1 ++ freeVariables e2
 freeVariables (NewStore e)    = freeVariables e
 freeVariables (Dereference x) = [x]
+
+-- the previous function defined as a fold
+freeVariables' :: Expr -> [String]
+freeVariables' = foldGCLExpr
+  ((: []),
+   const [],
+   const [],
+   [],
+   id,
+   (++),
+   id,
+   const (++),
+   filter . (/=),
+   id,
+   \x y z -> x ++ y ++ z,
+   \x y z -> x ++ y ++ z,
+   id,
+   (: []))
