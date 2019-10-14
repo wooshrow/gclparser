@@ -1,4 +1,5 @@
-// The contrived program below checks if $x$ is divisible by N.
+// The contrived program below checks if $x$ is divisible by N. 
+// Do note that in your cases N is a constant, which is at least 2.
 
 // N is an experiment parameter; replace it with a concrete value.
 
@@ -11,10 +12,10 @@ divByN(x:int | divisible:bool) {
   var k:int {
     k := 1 ;
     divisible := false ;
-    while k<x && ~divisible do {
+    while k<=x && ~divisible do {
       assert divisible 
              = 
-             (exists m:: 0<m && m<=x && m*N = x)  ;
+             (exists m:: 0<m && m<k && m*N = x)  ;
       var i:int {
         i := 0 ;
         while i<=N do { // deliberate bug ... should i<N
