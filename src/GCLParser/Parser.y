@@ -179,8 +179,8 @@ PExpr :: { Expr }
 --       | forall identifier colon colon PExpr            { let newName = $2 ++ "'"
 --                                                              in Forall newName (rename newName $2 $5) }
 
-       | forall identifier colon colon PExpr            { Forall  $2 $5 }
-       | exists identifier colon colon PExpr            { exists_ $2 $5 }
+       | forall identifier colon colon PExpr            { Forall $2 $5 }
+       | exists identifier colon colon PExpr            { Exists $2 $5 }
 
 {
 type ParseResult a = Either String a
