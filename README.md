@@ -14,6 +14,17 @@ To compile the tool, the following package are required:
 #### Compilation
 To compile the library, run the command `cabal build`.
 
+#### Running/testing from interpreter
+
+After building (see above), you can run ghci from ./src, passing the path to where
+Cabal puts the generated files, and passing relevant language options:
+
+```
+ghci -i../dist/build -XNamedFieldPuns
+```
+
+From there you can load packages e.g. `:l GCLParser.Parser` and try out functions defined there in the interpreter.
+
 #### Usage
 
 The module `GCLParser.Parser` exports two functions:
