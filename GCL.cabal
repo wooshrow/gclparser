@@ -1,12 +1,12 @@
 name:                GCLparser
-version:             0.1.1
--- synopsis:            
--- description:         
+version:             0.2.1
+-- synopsis:
+-- description:
 license:             BSD3
 license-file:        LICENSE
 author:              Stefan Koppier, Wishnu Prasetya
 -- maintainer:          s.koppier@students.uu.nl
--- copyright:           
+-- copyright:
 category:            Testing
 build-type:          Simple
 extra-source-files:  ChangeLog.md, README.md
@@ -16,11 +16,13 @@ Library
   exposed-modules:     GCLParser.Parser
                      , GCLParser.GCLDatatype
                      , GCLParser.PrettyPrint
+                     , GCLInterpreter
+                     , GCLUtils
                      , GCLLexer.Token
                      , GCLLexer.Lexer
                      , ExamplesOfSemanticFunction
-  -- other-extensions:    
-  build-depends:       base   >= 4.10 
+  -- other-extensions:
+  build-depends:       base   >= 4.10
                      , array
                      , containers
                      , optparse-applicative

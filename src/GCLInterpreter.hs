@@ -1,22 +1,56 @@
--- ignore this, work in progress
+{-
+   A simple interpreter to execute a GCP program. The top level
+   interface is:
+
+      execProgram gcl-program state
+
+    You need to give it a state containing all the parameters of the
+    program (its input as well as output params).
+
+    If the execution ends normally, you get a value of the form "Right t",
+    where t is the program's final state.
+
+    If the program ends by exeception you get "Left (msg,t)", where t is
+    the last state just before the exeception is thrown, and msg is a
+    message describing the kind of excpetion thrown.
+
+    The execution can also crash (Haskell calls "error"), which means there
+    is something else is wrong, e.g. the program tries to access a variable
+    that is not in its current state, or tries to evaluate an expression which
+    turns out to be type incorrect.
+
+    Assume-statement will be skipped. Assert-statement will be checked, but
+    quantifiers like Forall and Exists are not completely checked. The
+    interpreter will only check instances of the bound-variable between 0
+    and N, where N is the size of the largest array in the current state.
+
+-}
+
 module GCLInterpreter
-    (
-    )
+
 where
 
 import GCLParser.GCLDatatype
+import GCLParser.Parser
+import GCLParser.PrettyPrint
 
+-- Representation of values that result form evaluating expressions:
 data Value = Bool Bool
            | Int Int
            | ArrayBool [Bool]
            | ArrayInt [Int]
-           | Pointer String
+           | Pointer String  -- to represent a pointer/reference. "Pointer p" .. p is a string representing a unique address pointing to some object.
            deriving (Eq,Show)
 
 null_ = Pointer "null"
 
 
+-- representing the state of an executing program:
 type State = [(String,Value)]
+
+-- ==========================================
+-- Some utitlities to work on "State"
+-- ==========================================
 
 -- Update x in the given state to bind it to the given value.
 -- If x does not exists in the state, it is added.
@@ -26,18 +60,26 @@ update x val ((y,v) : state)
    | x==y       = (x,val) : state
    | otherwise  = (y,v) : update x val state
 
+-- state <@> x gives the value of x in the state:
 (<@>) :: State -> String -> Value
 [] <@> x = error ("The variable " ++ x ++ " does not exist in the current state.")
 ((y,v) : state) <@> x
    | x==y = v
    | otherwise = state <@> x
 
-
-remove :: String -> State -> State
-remove x [] = []
-remove x ((y,v) : state)
+--
+-- Push a new variable, initialized to the given value, onto
+-- the state.
+pushVar :: String -> Value -> State -> State
+pushVar x value state = (x,value) : state
+--
+-- Pop a variable from the state (removing its first instance)
+--
+popVar :: String -> State -> State
+popVar x [] = []
+popVar x ((y,v) : state)
    | x==y = state
-   | otherwise = (y,v) : remove x state
+   | otherwise = (y,v) : popVar x state
 
 -- get the size of the largest array in the state
 getLargestArraySize :: State -> Int
@@ -63,9 +105,11 @@ allocateNewObject x state = (refname, update refname (Int x) state)
    getIndexOfLastObj ((v,_) : state) = i `max` getIndexOfLastObj state
        where
        i = if take 3 v == "__p" then read (drop 3 v) else -1
---
+
+-- ==========================================
 -- Bunch of operations on Value
---
+-- ==========================================
+
 intOp :: (Int->Int->Int) -> Value -> Value -> Value
 intOp binop (Int i) (Int j) = Int (binop i j)
 intOp _ v1 v2 = error ("Expecting integers in e1 op e2: " ++ show v1 ++ ", " ++ show v2)
@@ -95,6 +139,21 @@ arrayRead (ArrayBool ab) (Int i) = Bool (ab !! i)
 arrayRead (ArrayInt a)   (Int i) = Int (a !! i)
 arrayRead a i = error ("Incompatible value-types in a[i]: " ++ show a ++ ", " ++ show i)
 
+updateList k x [] = []
+updateList k x (y:s)
+   | k==0  = x:s
+   | k>0   = y : updateList (k-1) x s
+
+arrayUpdate :: Int -> Value -> Value -> Value
+arrayUpdate k (Bool x) (ArrayBool a) = ArrayBool (updateList k x a)
+arrayUpdate k (Int x) (ArrayInt a)   = ArrayInt  (updateList k x a)
+arrayUpdate _ x a = error ("Trying to update an array with an incompatible value: " ++ show a ++ ", " ++ show x)
+
+arraySize :: Value -> Value
+arraySize (ArrayBool ab) = Int $ length ab
+arraySize (ArrayInt a)   = Int $ length a
+arraySize a = error ("Expecting an array: " ++ show a)
+
 valueToBool :: Value -> Bool
 valueToBool (Bool b) = b
 valueToBool e = error ("Expecting a boolean value: " ++ show e)
@@ -121,88 +180,252 @@ instantiateVarWithInt vname i expr = case expr of
    NewStore e -> NewStore (instantiateVarWithInt vname i e)
    Dereference p -> expr
 
+-- ==========================================
+-- Eval and Exec functions
+-- ==========================================
 
-
-eval :: State -> Expr -> Value
+--
+-- Evaluate an expression on the given state. It returns Right v, if
+-- the expression can be evaluated to a value v.
+-- Else, if an exeception like division-by-0 is encountered, then
+-- Left msg is returned, where msg is a message describing the problem.
+--
+eval :: State -> Expr -> Either String Value
 eval state expr = case expr of
-  Var x -> state <@> x
-  LitI i ->  Int i
-  LitB b -> Bool b
-  LitNull ->  null_
+  Var x  -> Right $ state <@> x
+  LitI i -> Right $ Int i
+  LitB b -> Right $ Bool b
+  LitNull ->  Right $ null_
   Parens e -> eval state  e
-  ArrayElem a i -> arrayRead (eval state a) (eval state i)
-  OpNeg e -> boolNot . eval state $ e
-  BinopExpr op e1 e2 ->
-     let
-     v1 = eval state e1
-     v2 = eval state e2
-     in
-     case op of
-       And -> boolOp (&&) v1 v2
-       Or  -> boolOp (||) v1 v2
-       Implication -> boolOp (\a b -> not a || b) v1 v2
-       LessThan -> numrelOp (<) v1 v2
-       LessThanEqual -> numrelOp (<=) v1 v2
-       GreaterThan -> numrelOp (>) v1 v2
-       GreaterThanEqual -> numrelOp (>=) v1 v2
-       Equal -> equalOp v1 v2
-       Minus -> intOp (-) v1 v2
-       Plus -> intOp (+) v1 v2
-       Multiply -> intOp (*) v1 v2
-       Divide -> intOp (div) v1 v2
-       Alias -> equalOp v1 v2
+
+  ArrayElem a i -> do
+    a_     <- eval state a
+    Int i_ <- eval state i
+    let Int n_ = arraySize a_
+    if 0<=i_ && i_ < n_
+       then return $ arrayRead a_ (Int i_)
+       else fail "EXC2: illegal array index"
+
+  OpNeg e -> do
+     e_ <- eval state e
+     return $ boolNot e_
+
+  BinopExpr op e1 e2 -> do
+     v1 <- eval state e1
+     v2 <- eval state e2
+     if op==Divide
+        then let
+             Int i = v2
+             in
+             if i==0 then fail "EXC1: division by 0"
+                     else return $ intOp (div) v1 v2
+        else return $ case op of
+          And -> boolOp (&&) v1 v2
+          Or  -> boolOp (||) v1 v2
+          Implication -> boolOp (\a b -> not a || b) v1 v2
+          LessThan -> numrelOp (<) v1 v2
+          LessThanEqual -> numrelOp (<=) v1 v2
+          GreaterThan -> numrelOp (>) v1 v2
+          GreaterThanEqual -> numrelOp (>=) v1 v2
+          Equal -> equalOp v1 v2
+          Minus -> intOp (-) v1 v2
+          Plus -> intOp (+) v1 v2
+          Multiply -> intOp (*) v1 v2
+          Alias -> equalOp v1 v2
   -- becareful, this implementation of Forall and Exists is unsound!
   -- it only quantifies over int in the range of 0 up-to the size of
   -- the largest array currently in the memory.
-  Forall x body ->
+  Forall x body -> do
+     let n = getLargestArraySize state
+     values <- sequence [ eval state $ (instantiateVarWithInt x i body) | i <- [0..n-1]]
+     return . Bool . and $ map valueToBool values
+  Exists x body -> do
+     let n = getLargestArraySize state
+     values <- sequence [ eval state $ (instantiateVarWithInt x i body) | i <- [0..n-1]]
+     return . Bool . or $ map valueToBool values
+  SizeOf a -> do
+     a_ <- eval state a
+     return $ case a_ of
+        ArrayBool a__ -> Int $ length a__
+        ArrayInt  a__ -> Int $ length a__
+        _             -> error ("Expecting an array: " ++ show a)
+
+  Dereference p ->
      let
-     n = getLargestArraySize state
-     in
-     Bool . and $ [ valueToBool . eval state $ (instantiateVarWithInt x i body) | i <- [0..n-1]]
-  Exists x body ->
-     let
-     n = getLargestArraySize state
-     in
-     Bool . or $ [ valueToBool . eval state $ (instantiateVarWithInt x i body) | i <- [0..n-1]]
-  SizeOf a -> case eval state a of
-     ArrayBool a_ -> Int $ length a_
-     ArrayInt  a_ -> Int $ length a_
-     _            -> error ("Expecting an array: " ++ show a)
-  --NewStore e -> case eval state e of
+     Pointer ref = state <@> p
+     value = state <@> ref
+     in Right value
+  -- this will be handled at the assignment level, since it can only occur
+  -- in the form of x := new(e)
+  NewStore _  -> undefined
+  -- these should not occur (only produced as intermediate expr during
+  -- wlp calculation):
+  RepBy _ _ _ -> undefined
+  Cond _ _ _  -> undefined
   --   Int x -> allocateNewObject
 
-{-
-      collectAllVariables (Forall _ e)    = collectAllVariables e
-      collectAllVariables (Exists _ e)    = collectAllVariables e
-      collectAllVariables (SizeOf a)      = collectAllVariables a
-      collectAllVariables (RepBy a e1 e2) = collectAllVariables a ++ collectAllVariables e1 ++ collectAllVariables e2
-      collectAllVariables (Cond g e1 e2)  = collectAllVariables g ++ collectAllVariables e1 ++ collectAllVariables e2
-      collectAllVariables (NewStore e)    = collectAllVariables e
-      collectAllVariables (Dereference x) = [x]
+-- lifted eval
+eval_ :: State -> Expr -> Either (String,State) Value
+eval_ state expr = case eval state expr of
+   Right e -> Right e
+   Left exception -> Left (exception,state)
 
-      -- a function to collect all free variables in a given expression.
-      freeVariables :: Expr -> [String]
-      freeVariables (Var x)    = [x]
-      freeVariables (LitI _)   = []
-      freeVariables (LitB _)   = []
-      freeVariables LitNull    = []
-      freeVariables (Parens e) = freeVariables e
-      freeVariables (ArrayElem a e) = freeVariables a ++ freeVariables e
-      freeVariables (OpNeg e)  = freeVariables e
-      freeVariables (BinopExpr _ e1 e2) = freeVariables e1 ++ freeVariables e2
+-- examples
+s0__ = [
+  ("i", Int 2),
+  ("k", Int 0),
+  ("b", Bool False),
+  ("u", Pointer "__p0"),
+  ("a", ArrayBool [True,False,False]),
+  ("__p0",Int 99)
+  ]
 
-      freeVariables (Forall x e)    = filter not_x (freeVariables e)
-          where
-          not_x y = y /= x
+--
+-- This function would execute a statement on the given state.
+-- If the execution is successful, the function returns Right t,
+-- where t is the resulting state.
+-- The execution might also aborts because of an exception was
+-- thrown. In this case the function returns Left msg t, where
+-- msg is some string describing the thrown exception, and t
+-- is the state just before the exception was thrown.
+-- Finally, an execution may fail to terminate, if the statement
+-- itself contains a non-terminating loop.
+--
+exec :: State -> Stmt -> Either (String,State) State
+exec state stmt = case stmt of
+   Skip -> return state
+   -- assume is ignored:
+   Assume p -> return state
 
-      freeVariables (Exists x e)    = filter not_x (freeVariables e)
-          where
-          not_x y = y /= x
+   Assert p -> do
+       Bool ok <- eval_ state p
+       if ok
+          then return state
+          else error ("Assertion violation: " ++ show stmt)
 
-      freeVariables (SizeOf a)      = freeVariables a
-      freeVariables (RepBy a e1 e2) = freeVariables a ++ freeVariables e1 ++ freeVariables e2
-      freeVariables (Cond g e1 e2)  = freeVariables g ++ freeVariables e1 ++ freeVariables e2
-      freeVariables (NewStore e)    = freeVariables e
-      freeVariables (Dereference x) = [x]
+   -- v := new(10)
+   Assign var (NewStore expr) -> do
+        Int i <- eval_ state expr
+        let (refToNewObj,state') = allocateNewObject i state
+        let state'' = update var (Pointer refToNewObj) state'
+        return state''
 
--}
+   -- ordinary assignment v := e
+   Assign var expr -> do
+        value <- eval_ state expr
+        let state' = update var value state
+        return state'
+
+   DrefAssign var expr -> do
+        value <- eval_ state expr
+        let state' = update var value state
+        return state'
+
+   AAssign  a index expr -> do
+        Int i <- eval_ state index
+        let array = state <@> a
+        let Int n = arraySize array
+        if 0<=i && i<n
+           then do
+                e <- eval_ state expr
+                let array' = arrayUpdate i e array
+                let state' = update a array' state
+                return state'
+           else fail "EXC2: illegal array index"
+
+   Seq stmt1 stmt2 -> do
+       intermediateState <- exec state stmt1
+       exec intermediateState stmt2
+
+   IfThenElse guard stmtThen stmtElse -> do
+       Bool g <- eval_ state guard
+       if g then exec state stmtThen
+            else exec state stmtElse
+
+   While guard body -> do
+       Bool g <- eval_ state guard
+       if g then exec state (Seq body stmt)
+            else return state
+
+   TryCatch exc body handler ->
+       -- add exc as a new loc-var
+       let
+       state1 = pushVar "exc" (Int 0) state
+       in
+       case exec state1 body of
+          Right state2 -> return $ popVar "exc" state2
+          Left (msg,state2) ->
+            let
+            state3 = case take 4 msg of
+                          "EXC1" -> update "exc" (Int 1) state2
+                          "EXC2" -> update "exc" (Int 2) state2
+                          _      -> update "exc" (Int 9) state2
+            in
+            case exec state3 handler of
+                Right state4      -> Right $ popVar "exc" state4
+                Left (msg,state4) -> Left (msg, popVar "exc" state4)
+
+
+   Block vardecls body ->
+      let
+      -- default initial value when declaring a local variable:
+      initialVal (PType PTInt) = Int 0
+      initialVal (PType PTBool)= Bool True
+      initialval (AType _)     = error "Declaring a local variable of type array is currently not supported"
+
+      varnames = [ name | VarDeclaration name ty <- vardecls]
+      -- allocate the declared vars into the state:
+      state2 = foldr (\(VarDeclaration name ty) state_ -> pushVar name (initialVal ty) state_)
+                     state
+                     vardecls
+
+      in
+      -- execute the body, then clean-up the vars we just added:
+      case exec state2 body of
+          Right state3      -> Right $ foldr (\v state_ -> popVar v state_) state3  varnames
+          Left (msg,state3) -> Left (msg, foldr (\v state_ -> popVar v state_) state3  varnames)
+
+
+--
+-- A function to execute a program on  given state. For example,
+-- consider a program P(x | y) body, where x is an input parameter,
+-- and y is an output parameter. To execute P you need to give it
+-- a state that contains x and y as variables, along with their initial
+-- values.
+-- Just like the execution statements, the result of executing
+-- a program is either Right t, where t is the resulting state.
+-- The execution might also aborts because of an exception was
+-- thrown. In this case the function returns Left msg t, where
+-- msg is some string describing the thrown exception, and t
+-- is the state just before the exception was thrown.
+--
+-- Also, upon termiantion, the initial values of the input parameters
+-- are restored. The values of output variables are not restored,
+-- of course.
+--
+execProgram :: Program -> State -> Either (String,State) State
+execProgram (Program name inputvars outputvars stmt) state =
+  let
+  inputParamNames   = [ name | VarDeclaration name ty <- inputvars]
+  inputParamsValues = [ (name, state<@>name) | VarDeclaration name ty <- inputvars]
+  -- copy the input variables into the state:
+  state2 = foldr (\(x,val) state_ -> pushVar x val state_) state inputParamsValues
+  in
+  -- execute the program's body, then pop the input-params:
+  case exec state2 stmt of
+     Right state3 -> Right $ foldr (\v state_ -> popVar v state_) state3 inputParamNames
+     Left (msg,state3) -> Left (msg,foldr (\v state_ -> popVar v state_) state3 inputParamNames)
+
+-- tests
+test_ = do
+   gcl <- parseGCLfile "../examples/benchmark/bsort.gcl"
+   let (Right prg) = gcl
+   putStrLn . ppProgram2String $ prg
+   let state1 = [("a", ArrayInt [4,1,3,7,0]),
+                 ("b", ArrayInt [0,0,0,0,0]),
+                 ("r", Int 99),
+                 ("i",Int 0), ("j",Int 4),
+                 ("x",Int 0), ("y",Int 4), ("z",Int 99)
+                 ]
+   let state2 = execProgram prg state1
+   putStrLn . show $ state2

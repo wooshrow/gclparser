@@ -5,10 +5,10 @@
 bsort( | a : []int) {
   assume #a>=0 && #a>=N ;
   var k:int {
-    k := 0 ;  
+    k := 0 ;
     // inv of outer loop
     assert 0<=k && k<=#a
-           && (forall i:: 0<=i && i<k ==> (forall j:: i<=j && j<#a ==> a[i]<=a[j])) ;         
+           && (forall i:: 0<=i && i<k ==> (forall j:: i<=j && j<#a ==> a[i]<=a[j])) ;
     while k<#a do {
       var m:int, tmp:int {
          m := #a-1 ;
@@ -16,10 +16,10 @@ bsort( | a : []int) {
          assert 0<=k && k<=#a
                 && (forall i:: 0<=i && i<k ==> (forall j:: i<=j && j<#a ==> a[i]<=a[j]))
                 && k<=m && m<#a
-                && (forall j:: m<=j && j<#a ==> a[m]<=a[j]) ; 
+                && (forall j:: m<=j && j<#a ==> a[m]<=a[j]) ;
          while k<m do {
-            if a[m]<a[m-1] 
-               then { 
+            if a[m]<a[m-1]
+               then {
                   tmp := a[m] ;
                   a[m] := a[m-1] ;
                   a[m-1] := tmp
@@ -27,8 +27,8 @@ bsort( | a : []int) {
                else { skip } ;
             m := m-1 }
       } ;
-      k := k+1 } 
+      k := k+1 }
   } ;
-  
+
   assert (forall i:: 0<=i && i<#a ==> (forall j:: i<=j && j<#a ==> a[i]<=a[j]))
 }

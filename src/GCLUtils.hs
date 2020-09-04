@@ -1,15 +1,16 @@
 module GCLUtils(
-   parseGCLstring,
-   parseGCLfile,
-   ppProgram2String,
-   echoTestParser
+   parseGCLstring,    -- parser, reading from string
+   parseGCLfile,      -- parser, reading from a file
+   ppProgram2String,  -- pretty printer
+   echoTestParser,
+   execProgram        -- an interpreter to execute a GCL program
 )
 where
-import GCLParser.GCLDatatype
 import GCLParser.Parser
 import GCLParser.PrettyPrint
-import Data.Either
+import GCLInterpreter
 
+echoTestParser :: String -> IO()
 echoTestParser filename = do
    gcl <- parseGCLfile filename
    let (Right prg) = gcl
