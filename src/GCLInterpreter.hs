@@ -348,22 +348,22 @@ exec state stmt = case stmt of
             else return state
 
    TryCatch exc body handler ->
-       -- add exc as a new loc-var
        let
-       state1 = pushVar "exc" (Int 0) state
+       -- add exc as a new loc-var
+       state1 = pushVar exc (Int 0) state
        in
        case exec state1 body of
-          Right state2 -> return $ popVar "exc" state2
+          Right state2 -> return $ popVar exc state2
           Left (msg,state2) ->
             let
             state3 = case take 4 msg of
-                          "EXC1" -> update "exc" (Int 1) state2
-                          "EXC2" -> update "exc" (Int 2) state2
-                          _      -> update "exc" (Int 9) state2
+                          "EXC1" -> update exc (Int 1) state2
+                          "EXC2" -> update exc (Int 2) state2
+                          _      -> update exc (Int 9) state2
             in
             case exec state3 handler of
-                Right state4      -> Right $ popVar "exc" state4
-                Left (msg,state4) -> Left (msg, popVar "exc" state4)
+                Right state4      -> Right $ popVar exc state4
+                Left (msg,state4) -> Left (msg, popVar exc state4)
 
 
    Block vardecls body ->
