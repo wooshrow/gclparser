@@ -158,6 +158,10 @@ valueToBool :: Value -> Bool
 valueToBool (Bool b) = b
 valueToBool e = error ("Expecting a boolean value: " ++ show e)
 
+valueToInt :: Value -> Int
+valueToInt (Int i) = i
+valueToInt e = error ("Expecting an integer value: " ++ show e)
+
 
 
 -- replaceing a varibale v (typically a bounded var) in an expression
@@ -199,12 +203,12 @@ eval state expr = case expr of
   Parens e -> eval state  e
 
   ArrayElem a i -> do
-    a_     <- eval state a
-    Int i_ <- eval state i
+    a_ <- eval state a
+    i_ <- valueToInt <$> eval state i
     let Int n_ = arraySize a_
     if 0<=i_ && i_ < n_
        then return $ arrayRead a_ (Int i_)
-       else fail "EXC2: illegal array index"
+       else Left "EXC2: illegal array index"
 
   OpNeg e -> do
      e_ <- eval state e
@@ -217,7 +221,7 @@ eval state expr = case expr of
         then let
              Int i = v2
              in
-             if i==0 then fail "EXC1: division by 0"
+             if i==0 then Left "EXC1: division by 0"
                      else return $ intOp (div) v1 v2
         else return $ case op of
           And -> boolOp (&&) v1 v2
@@ -298,14 +302,14 @@ exec state stmt = case stmt of
    Assume p -> return state
 
    Assert p -> do
-       Bool ok <- eval_ state p
+       ok <- valueToBool <$> eval_ state p
        if ok
           then return state
           else error ("Assertion violation: " ++ show stmt)
 
    -- v := new(10)
    Assign var (NewStore expr) -> do
-        Int i <- eval_ state expr
+        i <- valueToInt <$> eval_ state expr
         let (refToNewObj,state') = allocateNewObject i state
         let state'' = update var (Pointer refToNewObj) state'
         return state''
@@ -322,7 +326,7 @@ exec state stmt = case stmt of
         return state'
 
    AAssign  a index expr -> do
-        Int i <- eval_ state index
+        i <- valueToInt <$> eval_ state expr
         let array = state <@> a
         let Int n = arraySize array
         if 0<=i && i<n
@@ -331,19 +335,19 @@ exec state stmt = case stmt of
                 let array' = arrayUpdate i e array
                 let state' = update a array' state
                 return state'
-           else fail "EXC2: illegal array index"
+           else Left ("EXC2: illegal array index", state)
 
    Seq stmt1 stmt2 -> do
        intermediateState <- exec state stmt1
        exec intermediateState stmt2
 
    IfThenElse guard stmtThen stmtElse -> do
-       Bool g <- eval_ state guard
+       g <- valueToBool <$> eval_ state guard
        if g then exec state stmtThen
             else exec state stmtElse
 
    While guard body -> do
-       Bool g <- eval_ state guard
+       g <- valueToBool <$> eval_ state guard
        if g then exec state (Seq body stmt)
             else return state
 
