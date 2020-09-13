@@ -1,27 +1,27 @@
-// This contrived program modifies an array a such that each $a[k+1] is 
-// at least equal to a[k]+1. The post-condition is intentionally set wrong. 
+// This contrived program modifies an array a such that each $a[k+1] is
+// at least equal to a[k]+1. So, at the end we expect the last element
+// of a to be >= a[0]+#a-1.
 
 // N is an experiment parameter; replace it with a concrete value.
 
 pullUp(step:int , a:[]int | b:[]int) {
    // N is an experiment parameter
-   assume #a>=2 && #a>N && step>0 ;
-    
-   if a[0] >= a[1] 
+   assume #a>=2 && #a=N && step>0 ;
+
+   if a[0] >= a[1]
       then { a[1] := a[0] + step }
       else { skip } ;
-                
+
    var k:int {
      k := 1 ;
      while k < #a - 1 do {
-       if a[k] >= a[k+1] 
+       if a[k] >= a[k+1]
          then { a[k+1] := a[k] + step }
          else { skip } ;
        k := k+1
      }
    } ;
    b := a ;
-   // error; should be >= b[0]+#b-1
-   assert b[#b-1] >= b[0] + #b
-} 
-
+   // error; should be >= b[0]+#b-1. Change: bug removed.
+   assert b[N-1] >= b[0] + #b - 1
+}

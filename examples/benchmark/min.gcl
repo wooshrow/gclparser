@@ -1,13 +1,13 @@
 // This program returns the smallest element of an array a. Ref-typed variables and
-// creation of new stores are deliberately added to stress your verifier. 
-// The assignments to u.val and x.val are also deliberately added for the same reason; 
-// they should not affect the post-condition as their pointers cannot point to the same 
+// creation of new stores are deliberately added to stress your verifier.
+// The assignments to u.val and x.val are also deliberately added for the same reason;
+// they should not affect the post-condition as their pointers cannot point to the same
 // store pointed to by m (but your verifier has to prove this first of course).
 
 // N is an experiment parameter; replace it with a concrete value.
 
 min(a:[]int, x:ref, u:ref | m:ref) {
-  assume #a>0 && #a>=N 
+  assume #a>0 && #a=N 
          && ~(x == null)
          && (forall i:: 0<=i && i<#a ==> a[i]>0) ;
   var k:int {
@@ -15,11 +15,11 @@ min(a:[]int, x:ref, u:ref | m:ref) {
      while k<#a do {
         u := new(a[k]) ;
         if k=1 then { m := u } else { skip } ;
-        if u.val < m.val then { m:=u } else { u.val := u.val + 1 } ; 
+        if u.val < m.val then { m:=u } else { u.val := u.val + 1 } ;
         if ~(m == null) then { x.val := m.val + 1 }
                         else { skip } ;
         k := k+1
-     }                  
+     }
   } ;
   assert (forall i:: 0<=i && i<#a ==> m.val <= a[i])
 }
