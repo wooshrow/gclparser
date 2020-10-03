@@ -167,6 +167,9 @@ mutateExpr expr = filter (\m -> fst m /= NO_MUTATION) $ mutate expr
               m3 = (AOR_OR_AND, BinopExpr And e1 e2)
               in
               [m1,m2,m3]
+            Alias -> [(NO_MUTATION, expr)]
+            Implication -> [(NO_MUTATION, expr)]
+            Equal -> [(NO_MUTATION, expr)]
 
          in
          toplevel_mutants ++ group1 ++ group2
