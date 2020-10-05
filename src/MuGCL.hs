@@ -61,9 +61,13 @@ data MutationType = NO_MUTATION |
      AOR_TIMES_DROP_LEFT | AOR_TIMES_DROP_RIGHT |
      AOR_DIV_DROP_RIGHT | AOR_DIV_ROTATE |
 
-     -- mutations on && ||
-     AOR_AND_DROP_LEFT | AOR_AND_DROP_RIGHT | AOR_AND_OR |
-     AOR_OR_DROP_LEFT | AOR_OR_DROP_RIGHT | AOR_OR_AND |
+     -- mutations on && || IMP
+     LOR_AND_DROP_LEFT | LOR_AND_DROP_RIGHT | LOR_AND_OR |
+     LOR_OR_DROP_LEFT  | LOR_OR_DROP_RIGHT   | LOR_OR_AND |
+     LOR_IMP_DROP_LEFT  | LOR_IMP_DROP_RIGHT | LOR_IMP_ROTATE |
+
+     -- mutation on Equal and Alias
+     EOR_EQUAL_NEGATE | EOR_ALIAS_NEGATE |
 
      -- mutation on ~
      NOT_DROP |
@@ -150,24 +154,40 @@ mutateExpr expr = filter (\m -> fst m /= NO_MUTATION) $ mutate expr
             Divide ->
               let
               m1 = (AOR_DIV_DROP_RIGHT, e1)
-              m2 = (AOR_DIV_ROTATE, BinopExpr op e2 e1)
+              m2 = (AOR_DIV_ROTATE, BinopExpr Divide e2 e1)
               in
               [m1,m2]
             And ->
               let
-              m1 = (AOR_AND_DROP_RIGHT, e1)
-              m2 = (AOR_AND_DROP_LEFT, e2)
-              m3 = (AOR_AND_OR, BinopExpr Or e1 e2)
+              m1 = (LOR_AND_DROP_RIGHT, e1)
+              m2 = (LOR_AND_DROP_LEFT, e2)
+              m3 = (LOR_AND_OR, BinopExpr Or e1 e2)
               in
               [m1,m2,m3]
             Or ->
               let
-              m1 = (AOR_OR_DROP_RIGHT, e1)
-              m2 = (AOR_OR_DROP_LEFT, e2)
-              m3 = (AOR_OR_AND, BinopExpr And e1 e2)
+              m1 = (LOR_OR_DROP_RIGHT, e1)
+              m2 = (LOR_OR_DROP_LEFT, e2)
+              m3 = (LOR_OR_AND, BinopExpr And e1 e2)
               in
               [m1,m2,m3]
-
+            Implication ->
+              let
+              m1 = (LOR_IMP_DROP_RIGHT, e1)
+              m2 = (LOR_IMP_DROP_LEFT, e2)
+              m3 = (LOR_IMP_ROTATE, BinopExpr Implication e2 e1)
+              in
+              [m1,m2,m3]
+            Equal ->
+              let
+              m1 = (EOR_EQUAL_NEGATE, OpNeg $ BinopExpr Equal e1 e2)
+              in
+              [m1]
+            Alias ->
+              let
+              m1 = (EOR_ALIAS_NEGATE, OpNeg $ BinopExpr Alias e1 e2)
+              in
+              [m1]
          in
          toplevel_mutants ++ group1 ++ group2
       --
