@@ -59,7 +59,7 @@ Be mindful that this tool is experimental, and is not made for performance. Ther
 
 ##### mutation test
 
-The module `MuGCL` provides a function that generate mutants of a GCP Program.
+The module `MuGCL` provides a function that generate mutants of a GCL Program.
 Given a program P, the function below generates a bunch of so-called
 mutants. Each is a program P', which is a copy of P, but where it is changed
 in one place (e.g. some expression "i<n" is mutated to "i<=n").
