@@ -42,6 +42,7 @@ data Value = Bool Bool
            | Pointer String  -- to represent a pointer/reference. "Pointer p" .. p is a string representing a unique address pointing to some object.
            deriving (Eq,Show)
 
+null_ :: Value
 null_ = Pointer "null"
 
 
@@ -76,7 +77,7 @@ pushVar x value state = (x,value) : state
 -- Pop a variable from the state (removing its first instance)
 --
 popVar :: String -> State -> State
-popVar x [] = []
+popVar _ [] = []
 popVar x ((y,v) : state)
    | x==y = state
    | otherwise = (y,v) : popVar x state
@@ -94,15 +95,16 @@ getLargestArraySize ((_,v) : state) = case v of
 -- given state. Return the ref-name pointing to this new object,
 -- and the new state after adding the object.
 --
+allocateNewObject :: Int -> [(String,Value)] -> (String, State)
 allocateNewObject x [] =  (refname, update refname (Int x) [])
    where
    refname = "__p0"
 allocateNewObject x state = (refname, update refname (Int x) state)
    where
    refname = "__p" ++ show n
-   n = getIndexOfLastObj state + 1
+   n = getIndexOfLastObj state + 1 :: Int
    getIndexOfLastObj [] = -1
-   getIndexOfLastObj ((v,_) : state) = i `max` getIndexOfLastObj state
+   getIndexOfLastObj ((v,_) : s) = i `max` getIndexOfLastObj s
        where
        i = if take 3 v == "__p" then read (drop 3 v) else -1
 
@@ -139,10 +141,11 @@ arrayRead (ArrayBool ab) (Int i) = Bool (ab !! i)
 arrayRead (ArrayInt a)   (Int i) = Int (a !! i)
 arrayRead a i = error ("Incompatible value-types in a[i]: " ++ show a ++ ", " ++ show i)
 
-updateList k x [] = []
+updateList :: Int -> a -> [a] -> [a]
+updateList _ _ [] = []
 updateList k x (y:s)
-   | k==0  = x:s
-   | k>0   = y : updateList (k-1) x s
+   | k<=0  = x:s
+   | otherwise = y : updateList (k-1) x s
 
 arrayUpdate :: Int -> Value -> Value -> Value
 arrayUpdate k (Bool x) (ArrayBool a) = ArrayBool (updateList k x a)
@@ -182,7 +185,9 @@ instantiateVarWithInt vname i expr = case expr of
       if (x==vname) then expr else Exists x (instantiateVarWithInt vname i e)
    SizeOf e   -> SizeOf (instantiateVarWithInt vname i e)
    NewStore e -> NewStore (instantiateVarWithInt vname i e)
-   Dereference p -> expr
+   Dereference _ -> expr
+   RepBy a idx e -> RepBy (instantiateVarWithInt vname i a) (instantiateVarWithInt vname i idx) (instantiateVarWithInt vname i e)
+   Cond g e1 e2 -> RepBy (instantiateVarWithInt vname i g) (instantiateVarWithInt vname i e1) (instantiateVarWithInt vname i e2)
 
 -- ==========================================
 -- Eval and Exec functions
@@ -217,25 +222,23 @@ eval state expr = case expr of
   BinopExpr op e1 e2 -> do
      v1 <- eval state e1
      v2 <- eval state e2
-     if op==Divide
-        then let
-             Int i = v2
-             in
-             if i==0 then Left "EXC1: division by 0"
-                     else return $ intOp (div) v1 v2
-        else return $ case op of
-          And -> boolOp (&&) v1 v2
-          Or  -> boolOp (||) v1 v2
-          Implication -> boolOp (\a b -> not a || b) v1 v2
-          LessThan -> numrelOp (<) v1 v2
-          LessThanEqual -> numrelOp (<=) v1 v2
-          GreaterThan -> numrelOp (>) v1 v2
-          GreaterThanEqual -> numrelOp (>=) v1 v2
-          Equal -> equalOp v1 v2
-          Minus -> intOp (-) v1 v2
-          Plus -> intOp (+) v1 v2
-          Multiply -> intOp (*) v1 v2
-          Alias -> equalOp v1 v2
+     case op of
+        Divide ->
+            let Int i = v2
+            in if i==0 then Left "EXC1: division by 0"
+                       else return $ intOp (div) v1 v2
+        And -> return $ boolOp (&&) v1 v2
+        Or  -> return $ boolOp (||) v1 v2
+        Implication -> return $ boolOp (\a b -> not a || b) v1 v2
+        LessThan -> return $ numrelOp (<) v1 v2
+        LessThanEqual -> return $ numrelOp (<=) v1 v2
+        GreaterThan -> return $ numrelOp (>) v1 v2
+        GreaterThanEqual -> return $ numrelOp (>=) v1 v2
+        Equal -> return $ equalOp v1 v2
+        Minus -> return $ intOp (-) v1 v2
+        Plus -> return $ intOp (+) v1 v2
+        Multiply -> return $ intOp (*) v1 v2
+        Alias -> return $ equalOp v1 v2
   -- becareful, this implementation of Forall and Exists is unsound!
   -- it only quantifies over int in the range of 0 up-to the size of
   -- the largest array currently in the memory.
@@ -275,6 +278,7 @@ eval_ state expr = case eval state expr of
    Left exception -> Left (exception,state)
 
 -- examples
+s0__ :: [(String, Value)]
 s0__ = [
   ("i", Int 2),
   ("k", Int 0),
@@ -299,7 +303,7 @@ exec :: State -> Stmt -> Either (String,State) State
 exec state stmt = case stmt of
    Skip -> return state
    -- assume is ignored:
-   Assume p -> return state
+   Assume _ -> return state
 
    Assert p -> do
        ok <- valueToBool <$> eval_ state p
@@ -366,8 +370,8 @@ exec state stmt = case stmt of
                           _      -> update exc (Int 9) state2
             in
             case exec state3 handler of
-                Right state4      -> Right $ popVar exc state4
-                Left (msg,state4) -> Left (msg, popVar exc state4)
+                Right state4       -> Right $ popVar exc state4
+                Left (msg',state4) -> Left (msg', popVar exc state4)
 
 
    Block vardecls body ->
@@ -375,9 +379,10 @@ exec state stmt = case stmt of
       -- default initial value when declaring a local variable:
       initialVal (PType PTInt) = Int 0
       initialVal (PType PTBool)= Bool True
-      initialval (AType _)     = error "Declaring a local variable of type array is currently not supported"
+      initialVal (AType _)     = error "Declaring a local variable of type array is currently not supported"
+      initialVal RefType       = error "Declaring a local variable of type reference is currently not supported"
 
-      varnames = [ name | VarDeclaration name ty <- vardecls]
+      varnames = [ name | VarDeclaration name _ty <- vardecls]
       -- allocate the declared vars into the state:
       state2 = foldr (\(VarDeclaration name ty) state_ -> pushVar name (initialVal ty) state_)
                      state
@@ -408,10 +413,10 @@ exec state stmt = case stmt of
 -- of course.
 --
 execProgram :: Program -> State -> Either (String,State) State
-execProgram (Program name inputvars outputvars stmt) state =
+execProgram (Program _ inputvars _ stmt) state =
   let
-  inputParamNames   = [ name | VarDeclaration name ty <- inputvars]
-  inputParamsValues = [ (name, state<@>name) | VarDeclaration name ty <- inputvars]
+  inputParamNames   = [ name | VarDeclaration name _ <- inputvars]
+  inputParamsValues = [ (name, state<@>name) | VarDeclaration name _ <- inputvars]
   -- copy the input variables into the state:
   state2 = foldr (\(x,val) state_ -> pushVar x val state_) state inputParamsValues
   in
@@ -421,6 +426,7 @@ execProgram (Program name inputvars outputvars stmt) state =
      Left (msg,state3) -> Left (msg,foldr (\v state_ -> popVar v state_) state3 inputParamNames)
 
 -- tests
+test_ :: IO ()
 test_ = do
    gcl <- parseGCLfile "../examples/benchmark/bsort.gcl"
    let (Right prg) = gcl

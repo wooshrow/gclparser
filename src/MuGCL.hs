@@ -85,12 +85,12 @@ data MutationType = NO_MUTATION |
 f $> (a,x) = (a, f x)
 
 mutateExpr :: Expr -> [(MutationType,Expr)]
-mutateExpr expr = filter (\m -> fst m /= NO_MUTATION) $ mutate expr
+mutateExpr = filter (\m -> fst m /= NO_MUTATION) . mutate
    where
    mutate expr = case expr of
-      Var v   -> [(NO_MUTATION, expr)]
-      LitI x  -> [(NO_MUTATION, expr)]
-      LitB x  -> [(NO_MUTATION, expr)]
+      Var _   -> [(NO_MUTATION, expr)]
+      LitI _  -> [(NO_MUTATION, expr)]
+      LitB _  -> [(NO_MUTATION, expr)]
       LitNull -> [(NO_MUTATION, expr)]
       Parens e ->  [ Parens $> e' | e' <- mutate e]
       ArrayElem a i ->
@@ -207,15 +207,15 @@ mutateExpr expr = filter (\m -> fst m /= NO_MUTATION) $ mutate expr
 
       NewStore e -> map (NewStore $>) $ mutate e
 
-      Dereference p -> [(NO_MUTATION, expr)]
+      Dereference _ -> [(NO_MUTATION, expr)]
 
 mutateStmt :: Stmt -> [(MutationType,Stmt)]
-mutateStmt stmt = filter (\m -> fst m /= NO_MUTATION) $ mutate stmt
+mutateStmt = filter (\m -> fst m /= NO_MUTATION) . mutate
   where
   mutate stmt = case stmt of
      Skip     -> [(NO_MUTATION, stmt)]
-     Assert e -> [(NO_MUTATION, stmt)]
-     Assume e -> [(NO_MUTATION, stmt)]
+     Assert _ -> [(NO_MUTATION, stmt)]
+     Assume _ -> [(NO_MUTATION, stmt)]
      Assign  x e    -> map (Assign x $>) $ mutateExpr e
      DrefAssign x e -> map (DrefAssign x $>) $ mutateExpr e
      AAssign x i e -> map ((\i_ -> AAssign x i_ e) $>) (mutateExpr i)
@@ -260,6 +260,7 @@ mutateProgram (Program name inputParams outputParams body)
 
 
 -- tests
+test_ :: IO ()
 test_ = do
    gcl <- parseGCLfile "../examples/benchmark/bsort.gcl"
    let (Right prg) = gcl
