@@ -127,10 +127,10 @@ PStatements :: { Stmt }
              : PStatements semicolon PStatements { Seq $1 $3 }
              | PStatement                        { $1 }
 
---PArguments :: { [Expr] }
---            : PExpr comma PArguments { $1 : $3 }
---            | PExpr                  { [$1] }
---            |                        { [] }
+PArguments :: { [Expr] }
+            : PExpr comma PArguments { $1 : $3 }
+            | PExpr                  { [$1] }
+            |                        { [] }
 
 PStatement  :: { Stmt }
              : skip                                                   { Skip }
@@ -143,7 +143,7 @@ PStatement  :: { Stmt }
              | identifier sopen PExpr sclose assign PExpr             { AAssign $1 $3 $6 }
              | identifier assign PExpr                                { Assign $1 $3 }
              | identifier dot val assign PExpr                        { DrefAssign $1 $5 }
---           | popen PIdentifiers pclose assign identifier popen PArguments pclose { Call $2 $7 $5 }
+             | popen PIdentifiers pclose assign identifier popen PArguments pclose { Call $2 $5 $7 }
 
 PIdentifiers :: { [String] }
               : identifier comma PIdentifiers { $1 : $3 }

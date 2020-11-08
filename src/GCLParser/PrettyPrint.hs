@@ -23,8 +23,8 @@ ppProcedure Procedure {name,input,output,preCondition,postCondition,stmt}
         pre   p = text "pre {" <> ppExpr p <> char '}'
         post  p = text "post {" <> ppExpr p <> char '}'
         args    = input' <> text " | " <> output'
-        input'  = ppVarDeclarations input
-        output' = ppVarDeclarations output
+        input'  = commaSeparated ppVarDeclaration input
+        output' = commaSeparated ppVarDeclaration output
 
 
 ppExpr :: Expr -> Doc
@@ -38,6 +38,7 @@ ppStmt (Assume e)           = text "assume " <> ppExpr e
 ppStmt (Assign x e)         = text x <> text " := " <> ppExpr e
 ppStmt (DrefAssign x e)     = text x <> text ".val := " <> ppExpr e
 ppStmt (AAssign x i e)      = text x <> char '[' <> ppExpr i <> char ']' <> text " := " <> ppExpr e
+ppStmt (Call vars f args)   = text "(" <> commaSeparated text vars <> text ") := " <> text f <> text "(" <> commaSeparated ppExpr args <> text ")"
 ppStmt (Seq s1 s2)          = ppStmt s1 <> char ';' $+$ ppStmt s2
 ppStmt (IfThenElse g s1 s2) =   text "if " <> ppExpr g <> text " then {"
                             $+$ tab (ppStmt s1)
@@ -52,11 +53,9 @@ ppStmt (TryCatch e s h) = text "try{ "
                           $+$ text ("catch(" ++ e ++ "){")
                           $+$ tab (ppStmt h <> text "}")     
                                             
-ppStmt (Block vardecls s) = (text "var " <> ppVarDeclarations vardecls <> text " {")
+ppStmt (Block vardecls s) = (text "var " <> commaSeparated ppVarDeclaration vardecls <> text " {")
                           $+$ tab (ppStmt s <> text "}")
 
-ppVarDeclarations :: [VarDeclaration] -> Doc
-ppVarDeclarations = hcat . intersperse comma . map ppVarDeclaration
 
 ppVarDeclaration :: VarDeclaration -> Doc
 ppVarDeclaration (VarDeclaration s t)
@@ -73,3 +72,6 @@ ppPrimitiveType PTBool = text "bool"
 
 tab :: Doc -> Doc
 tab = nest 4
+
+commaSeparated :: (a -> Doc) -> [a] -> Doc
+commaSeparated f = hcat . intersperse comma . map f

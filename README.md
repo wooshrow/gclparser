@@ -55,6 +55,12 @@ The module `GCLInterpreter` provides a function to execute a GCL program, given 
 execProgram :: Program -> State -> Either (String,State) State
 ```
 
+Another option is to provide the parameter values positionally:
+
+```Haskell
+callProgram :: Program -> [Value] -> Either String [Value]
+```
+
 Be mindful that this tool is experimental, and is not made for performance. There is also some incompleteness when interpreting the ∀ and ∃ quantifiers. Obviously, we can't actually check such a quantifier over the whole space of integers, so some practical choice was made. See the module in-code documentation.
 
 ##### mutation test

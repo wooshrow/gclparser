@@ -222,6 +222,7 @@ mutateStmt = filter (\m -> fst m /= NO_MUTATION) . mutate
                       ++
                       map ((\e_ -> AAssign x i e_) $>) (mutateExpr e)
 
+     Call vars name args -> map (Call vars name $>) (mutateEach mutateExpr args)
      -- we will not drop parts of Seq as that might remove some Asserts
      Seq stmt1 stmt2 -> map ((\s1_ -> Seq s1_ stmt2) $>) (mutate stmt1)
                         ++
@@ -253,14 +254,14 @@ mutateStmt = filter (\m -> fst m /= NO_MUTATION) . mutate
         m1 : group1 ++ group2
 
 
+mutateEach :: (a -> [(t, a)]) -> [a] -> [(t, [a])]
+mutateEach _ [] = []
+mutateEach mutateOne (x : xs) =
+    map ((: xs) $>) (mutateOne x)
+    ++ map ((x :) $>) (mutateEach mutateOne xs)
+
 mutateProgram :: Program -> [(MutationType, Program)]
-mutateProgram = map (Program $>) . mutate . procedures
-  where
-    mutate :: [Procedure] -> [(MutationType, [Procedure])]
-    mutate [] = []
-    mutate (proc : procs) =
-      map ((: procs) $>) (mutateProcedure proc)
-      ++ map ((proc :) $>) (mutate procs)
+mutateProgram = map (Program $>) . mutateEach mutateProcedure . procedures
 
 
 mutateProcedure :: Procedure -> [(MutationType, Procedure)]

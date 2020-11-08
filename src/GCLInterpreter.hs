@@ -1,18 +1,14 @@
 {-
    A simple interpreter to execute a GCP program. The top level
-   interface is:
+   interface to execute the first procedure in a program is:
 
-      execProcedure gcl-procedure state
+      callProgram gcl-procedure parameters
 
-    or, to execute the first procedure in a program:
+    You need to give it a state, which can usually be empty, and the values
+    of all the input parameters of the procedure (in the right order).
 
-      execProgram gcl-program state
-
-    You need to give it a state containing all the parameters of the
-    procedure (its input as well as output params).
-
-    If the execution ends normally, you get a value of the form "Right t",
-    where t is the procedures's final state.
+    If the execution ends normally, you get a value of the form "Right res",
+    where res is a list of return values.
 
     If the procedures ends by exeception you get "Left (msg,t)", where t is
     the last state just before the exeception is thrown, and msg is a
@@ -34,6 +30,7 @@ module GCLInterpreter
 
 where
 
+import Data.List (find)
 import GCLParser.GCLDatatype
 import GCLParser.Parser
 import GCLParser.PrettyPrint
@@ -169,6 +166,13 @@ valueToInt :: Value -> Int
 valueToInt (Int i) = i
 valueToInt e = error ("Expecting an integer value: " ++ show e)
 
+-- default initial value when declaring a local or return variable
+initialValue :: Type -> Value
+initialValue (PType PTInt) = Int 0
+initialValue (PType PTBool) = Bool True
+initialValue (AType PTInt) = ArrayInt []
+initialValue (AType PTBool) = ArrayBool []
+initialValue RefType = null_
 
 
 -- replaceing a varibale v (typically a bounded var) in an expression
@@ -277,9 +281,15 @@ eval state expr = case expr of
 
 -- lifted eval
 eval_ :: State -> Expr -> Either (String,State) Value
-eval_ state expr = case eval state expr of
-   Right e -> Right e
-   Left exception -> Left (exception,state)
+eval_ state expr = addStateToError state (eval state expr)
+
+addStateToError :: State -> Either e a -> Either (e,State) a
+addStateToError state = either (\e -> Left (e,state)) Right
+
+dropStateFromError :: Either (e,State) a -> Either e a
+dropStateFromError = either (Left . fst) Right
+
+
 
 -- examples
 s0__ :: [(String, Value)]
@@ -303,8 +313,8 @@ s0__ = [
 -- Finally, an execution may fail to terminate, if the statement
 -- itself contains a non-terminating loop.
 --
-exec :: State -> Stmt -> Either (String,State) State
-exec state stmt = case stmt of
+exec :: [Procedure] -> State -> Stmt -> Either (String,State) State
+exec procs state stmt = case stmt of
    Skip -> return state
    -- assume is ignored:
    Assume _ -> return state
@@ -345,18 +355,32 @@ exec state stmt = case stmt of
                 return state'
            else Left ("EXC2: illegal array index: " ++ show stmt, state)
 
+   Call vars f args ->
+       case find ((== f) . name) procs of
+          Nothing -> error ("Calling undefined procedure: " ++ f)
+          Just proc -> do
+            evaluatedArgs <- traverse (eval_ state) args
+            results <- addStateToError state $ callProcedure procs proc evaluatedArgs
+            if length results /= length vars
+              then
+                error $
+                  f ++ " returned " ++ show (length results) ++ " arguments,"
+                  ++ " expected " ++ show (length vars)
+              else
+                return $ foldr (\(var, value) -> update var value) state (zip vars results)
+
    Seq stmt1 stmt2 -> do
-       intermediateState <- exec state stmt1
-       exec intermediateState stmt2
+       intermediateState <- exec procs state stmt1
+       exec procs intermediateState stmt2
 
    IfThenElse guard stmtThen stmtElse -> do
        g <- valueToBool <$> eval_ state guard
-       if g then exec state stmtThen
-            else exec state stmtElse
+       if g then exec procs state stmtThen
+            else exec procs state stmtElse
 
    While guard body -> do
        g <- valueToBool <$> eval_ state guard
-       if g then exec state (Seq body stmt)
+       if g then exec procs state (Seq body stmt)
             else return state
 
    TryCatch exc body handler ->
@@ -364,7 +388,7 @@ exec state stmt = case stmt of
        -- add exc as a new loc-var
        state1 = pushVar exc (Int 0) state
        in
-       case exec state1 body of
+       case exec procs state1 body of
           Right state2 -> return $ popVar exc state2
           Left (msg,state2) ->
             let
@@ -373,36 +397,36 @@ exec state stmt = case stmt of
                           "EXC2" -> update exc (Int 2) state2
                           _      -> update exc (Int 9) state2
             in
-            case exec state3 handler of
-                Right state4       -> Right $ popVar exc state4
+            case exec procs state3 handler of
+                Right state4      -> Right $ popVar exc state4
                 Left (msg',state4) -> Left (msg', popVar exc state4)
 
 
    Block vardecls body ->
       let
-      -- default initial value when declaring a local variable:
-      initialVal (PType PTInt) = Int 0
-      initialVal (PType PTBool)= Bool True
-      initialVal (AType _)     = error "Declaring a local variable of type array is currently not supported"
-      initialVal RefType       = error "Declaring a local variable of type reference is currently not supported"
-
       varnames = [ name | VarDeclaration name _ty <- vardecls]
       -- allocate the declared vars into the state:
-      state2 = foldr (\(VarDeclaration name ty) state_ -> pushVar name (initialVal ty) state_)
+      state2 = foldr (\(VarDeclaration name ty) state_ -> pushVar name (initialValue ty) state_)
                      state
                      vardecls
 
       in
       -- execute the body, then clean-up the vars we just added:
-      case exec state2 body of
+      case exec procs state2 body of
           Right state3      -> Right $ foldr (\v state_ -> popVar v state_) state3  varnames
           Left (msg,state3) -> Left (msg, foldr (\v state_ -> popVar v state_) state3  varnames)
 
 -- Just executes the first procedure of the program.
 execProgram :: Program -> State -> Either (String,State) State
-execProgram (Program procs) = execProcedure (head procs)
+execProgram (Program procs) state = execProcedure procs state (head procs)
 
---
+execProcedure :: [Procedure] -> State -> Procedure -> Either (String,State) State
+execProcedure procs state p = exec procs state (stmt p)
+
+-- Just calls the first procedure of the program.
+callProgram :: Program -> [Value] -> Either String [Value]
+callProgram (Program procs) = callProcedure procs (head procs)
+
 -- A function to execute a procedure on  given state. For example,
 -- consider a procedure P(x | y) body, where x is an input parameter,
 -- and y is an output parameter. To execute P you need to give it
@@ -411,26 +435,44 @@ execProgram (Program procs) = execProcedure (head procs)
 -- Just like the execution statements, the result of executing
 -- a procedure is either Right t, where t is the resulting state.
 -- The execution might also aborts because of an exception was
--- thrown. In this case the function returns Left msg t, where
--- msg is some string describing the thrown exception, and t
--- is the state just before the exception was thrown.
+-- thrown. In this case the function returns Left msg, where
+-- msg is some string describing the thrown exception.
 --
--- Also, upon termiantion, the initial values of the input parameters
--- are restored. The values of output variables are not restored,
--- of course.
---
-execProcedure :: Procedure -> State -> Either (String,State) State
-execProcedure (Procedure _ inputvars _ _ _ stmt) state =
+callProcedure :: [Procedure] -> Procedure -> [Value] -> Either String [Value]
+callProcedure _ (Procedure name inputVars _ _ _ _) args
+  | length args /= length inputVars =
+      error $
+        "expected " ++ show (length inputVars) ++ " arguments to " ++ name
+        ++ ", got " ++ show (length args)
+callProcedure procs (Procedure name inputVars outputVars pre post stmt) args =
   let
-  inputParamNames   = [ name | VarDeclaration name _ <- inputvars]
-  inputParamsValues = [ (name, state<@>name) | VarDeclaration name _ <- inputvars]
-  -- copy the input variables into the state:
-  state2 = foldr (\(x,val) state_ -> pushVar x val state_) state inputParamsValues
-  in
-  -- execute the program's body, then pop the input-params:
-  case exec state2 stmt of
-     Right state3 -> Right $ foldr (\v state_ -> popVar v state_) state3 inputParamNames
-     Left (msg,state3) -> Left (msg,foldr (\v state_ -> popVar v state_) state3 inputParamNames)
+  inputParamNames = [ var | VarDeclaration var _ <- inputVars]
+  outputParamNames = [ var | VarDeclaration var _ <- outputVars]
+  input = zip inputParamNames args
+  output = [ (var, initialValue ty) | VarDeclaration var ty <- outputVars]
+  in do
+    checkPrecondition input
+    state' <- dropStateFromError $ exec procs (input ++ output) stmt
+    let outputResults = map (\v -> (v, getVar v state')) outputParamNames
+    checkPostcondition (input ++ outputResults)
+    return (map snd outputResults)
+
+  where
+    checkPrecondition state = do
+      ok <- fmap valueToBool <$> traverse (eval state) pre
+      case ok of
+        Just False -> error ("Precondition violation when calling " ++ name ++ ": " ++ show state)
+        _ -> return ()
+
+    checkPostcondition state = do
+      ok <- fmap valueToBool <$> traverse (eval state) post
+      case ok of
+        Just False -> error ("Postcondition violation in " ++ name ++ ": " ++ show state)
+        _ -> return ()
+
+    getVar v s = case lookup v s of
+      Just value -> value
+      Nothing -> error ("function " ++ name ++ " did not return " ++ v)
 
 -- tests
 test_ :: IO ()
