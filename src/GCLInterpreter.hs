@@ -2,20 +2,24 @@
    A simple interpreter to execute a GCP program. The top level
    interface is:
 
+      execProcedure gcl-procedure state
+
+    or, to execute the first procedure in a program:
+
       execProgram gcl-program state
 
     You need to give it a state containing all the parameters of the
-    program (its input as well as output params).
+    procedure (its input as well as output params).
 
     If the execution ends normally, you get a value of the form "Right t",
-    where t is the program's final state.
+    where t is the procedures's final state.
 
-    If the program ends by exeception you get "Left (msg,t)", where t is
+    If the procedures ends by exeception you get "Left (msg,t)", where t is
     the last state just before the exeception is thrown, and msg is a
     message describing the kind of excpetion thrown.
 
     The execution can also crash (Haskell calls "error"), which means there
-    is something else is wrong, e.g. the program tries to access a variable
+    is something else is wrong, e.g. the procedures tries to access a variable
     that is not in its current state, or tries to evaluate an expression which
     turns out to be type incorrect.
 
@@ -394,15 +398,18 @@ exec state stmt = case stmt of
           Right state3      -> Right $ foldr (\v state_ -> popVar v state_) state3  varnames
           Left (msg,state3) -> Left (msg, foldr (\v state_ -> popVar v state_) state3  varnames)
 
+-- Just executes the first procedure of the program.
+execProgram :: Program -> State -> Either (String,State) State
+execProgram (Program procs) = execProcedure (head procs)
 
 --
--- A function to execute a program on  given state. For example,
--- consider a program P(x | y) body, where x is an input parameter,
+-- A function to execute a procedure on  given state. For example,
+-- consider a procedure P(x | y) body, where x is an input parameter,
 -- and y is an output parameter. To execute P you need to give it
 -- a state that contains x and y as variables, along with their initial
 -- values.
 -- Just like the execution statements, the result of executing
--- a program is either Right t, where t is the resulting state.
+-- a procedure is either Right t, where t is the resulting state.
 -- The execution might also aborts because of an exception was
 -- thrown. In this case the function returns Left msg t, where
 -- msg is some string describing the thrown exception, and t
@@ -412,8 +419,8 @@ exec state stmt = case stmt of
 -- are restored. The values of output variables are not restored,
 -- of course.
 --
-execProgram :: Program -> State -> Either (String,State) State
-execProgram (Program _ inputvars _ stmt) state =
+execProcedure :: Procedure -> State -> Either (String,State) State
+execProcedure (Procedure _ inputvars _ _ _ stmt) state =
   let
   inputParamNames   = [ name | VarDeclaration name _ <- inputvars]
   inputParamsValues = [ (name, state<@>name) | VarDeclaration name _ <- inputvars]

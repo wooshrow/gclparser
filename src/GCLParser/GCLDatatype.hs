@@ -25,22 +25,24 @@ data VarDeclaration
     = VarDeclaration String Type
     deriving (Show)
 
-{-
-data Procedure 
-    = Procedure String [VarDeclaration] [VarDeclaration] Expr Expr
+data Program
+    = Program
+        { procedures :: [Procedure]
+        }
     deriving (Show)
--}
 
-data Program 
-    = Program { 
---                pre    :: Expr, 
-              name   :: String 
-              , input  :: [VarDeclaration]
-              , output :: [VarDeclaration]
-              , stmt   :: Stmt
---              , procs  :: [Procedure]
---              , post   :: Expr 
-              } 
+data Procedure
+    = Procedure
+        { name          :: String
+        , input         :: [VarDeclaration]
+        , output        :: [VarDeclaration]
+        , preCondition  :: Maybe Expr
+          -- ^ Can refer to input variables only.
+        , postCondition :: Maybe Expr
+          -- ^ Can refer to input and output variables only.
+          -- Input variables will be at the state when the procedure was called.
+        , stmt          :: Stmt
+        }
     deriving (Show)
 
 data Stmt

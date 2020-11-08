@@ -18,6 +18,8 @@ import Debug.Trace
     identifier       { TIdent     $$     }
     intvalue         { TIntValue  $$     }
     boolvalue        { TBoolValue $$     }
+    pre              { TPre              }
+    post             { TPost             }
     skip             { TSkip             }
     assert           { TAssert           }
     assume           { TAssume           }
@@ -83,22 +85,24 @@ import Debug.Trace
 -- | Program parsing
 
 PProgram    :: { Program }
---             : PConditions identifier popen PVarDeclarations bar PVarDeclarations pclose copen PStatements cclose PConditions PProcedures
---                { Program $1 $2 $4 $6 $9 $12 $11 }
-             : identifier popen PVarDeclarations bar PVarDeclarations pclose copen PStatements cclose 
-                { Program $1 $3 $5 $8 }
+             : PProcedures
+                { Program $1 }
 
---PProcedures :: { [Procedure] }
---             : PProcedure PProcedures { $1 : $2 }
---             | PProcedure             { [$1] }
---             |                        { [] }
+PProcedures :: { [Procedure] }
+             : PProcedure PProcedures { $1 : $2 }
+             | PProcedure             { [$1] }
 
---PProcedure :: { Procedure }
---              : PConditions identifier popen PVarDeclarations bar PVarDeclarations pclose PConditions
---                 { Procedure $2 $4 $6 $1 $8 }
+PProcedure :: { Procedure }
+            : PPreCondition identifier popen PVarDeclarations bar PVarDeclarations pclose copen PStatements cclose PPostCondition
+                 { Procedure $2 $4 $6 $1 $11 $9 }
 
---PConditions :: { Expr }
---             : copen PExpr cclose { $2 }
+PPreCondition :: { Maybe Expr }
+               : pre copen PExpr cclose { Just $3 }
+               |                        { Nothing }
+
+PPostCondition :: { Maybe Expr }
+                : post copen PExpr cclose { Just $3 }
+                |                         { Nothing }
 
 PVarDeclarations :: { [VarDeclaration] }
                   : PVarDeclaration comma PVarDeclarations { $1 : $3 }

@@ -253,10 +253,20 @@ mutateStmt = filter (\m -> fst m /= NO_MUTATION) . mutate
         m1 : group1 ++ group2
 
 
-mutateProgram :: Program -> [(MutationType,Program)]
-mutateProgram (Program name inputParams outputParams body)
+mutateProgram :: Program -> [(MutationType, Program)]
+mutateProgram = map (Program $>) . mutate . procedures
+  where
+    mutate :: [Procedure] -> [(MutationType, [Procedure])]
+    mutate [] = []
+    mutate (proc : procs) =
+      map ((: procs) $>) (mutateProcedure proc)
+      ++ map ((proc :) $>) (mutate procs)
+
+
+mutateProcedure :: Procedure -> [(MutationType, Procedure)]
+mutateProcedure (Procedure name inputParams outputParams pre post body)
    =
-   map (Program name inputParams outputParams $>) $ mutateStmt body
+   map (Procedure name inputParams outputParams pre post $>) $ mutateStmt body
 
 
 -- tests

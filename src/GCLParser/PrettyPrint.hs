@@ -10,11 +10,18 @@ ppProgram2String :: Program -> String
 ppProgram2String prg = show . ppProgram $ prg
 
 ppProgram :: Program -> Doc
-ppProgram Program {name,input,output,stmt}
-    =   (text name <> char '(' <> args <> text ") {")
+ppProgram = vcat . intersperse (text "") . map ppProcedure . procedures
+
+ppProcedure :: Procedure -> Doc
+ppProcedure Procedure {name,input,output,preCondition,postCondition,stmt}
+    =   maybe mempty pre preCondition
+    $+$ (text name <> char '(' <> args <> text ") {")
     $+$ tab (ppStmt stmt)
     $+$ char '}'
+    $+$ maybe mempty post postCondition
     where
+        pre   p = text "pre {" <> ppExpr p <> char '}'
+        post  p = text "post {" <> ppExpr p <> char '}'
         args    = input' <> text " | " <> output'
         input'  = ppVarDeclarations input
         output' = ppVarDeclarations output

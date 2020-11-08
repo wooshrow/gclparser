@@ -15,6 +15,8 @@ $alpha = [a-zA-Z]		-- alphabetic characters
 
 tokens :-
     $white+			            	;
+    "pre"                           {\s -> TPre }
+    "post"                          {\s -> TPost }
     "skip"                          {\s -> TSkip }
     "assert"                        {\s -> TAssert }
     "assume"                        {\s -> TAssume }
