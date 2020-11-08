@@ -1,8 +1,8 @@
 // Given non-empty array `a`, this program returns an index of `a` 
 // pointing to a minimum element of `a`. 
 // Supposedly valid.
+pre { #a > 0 }
 minind(a:[]int | r:int) { 
-   assume #a > 0 ;
    var min:int, i:int {
        i   := 0;
        min := a[i]; 
@@ -15,7 +15,9 @@ minind(a:[]int | r:int) {
           else { skip };
           i := i + 1
       }
-   } ;
-   assert (0<= r) && (r < #a) &&
-          (forall i :: ((0<=i && (i< #a)) ==>  (a[i] >= a[r]))) 
+   }
+}
+post {
+  (0 <= r) && (r < #a)
+  && (forall i :: ((0<=i && (i< #a)) ==>  (a[i] >= a[r])))
 }
