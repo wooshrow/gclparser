@@ -2,14 +2,12 @@
 // program swaps the content of `a[i]` and `a[j]`.
 
 pre { (0<#a) && (0<=i) && (i<#a) && (0<=j) && (j<#a) }
-swap(i:int, j:int | a:[]int) {
-  var oldiVal:int, oldjVal:int, tmp:int {
-      oldiVal := a[i] ;
-      oldjVal := a[j] ;
-        
-      tmp  := a[i] ; 
-      a[i] := a[j] ;
-      a[j] := tmp ;
-      assert (a[i] = oldjVal) && (a[j] = oldiVal)
+swap(i:int, j:int, a:[]int | out:[]int) {
+  out := a ;
+  var tmp:int {
+      tmp    := out[i] ;
+      out[i] := out[j] ;
+      out[j] := tmp
   }
 }
+post { (out[i] = a[j]) && (out[j] = a[i]) }

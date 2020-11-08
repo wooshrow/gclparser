@@ -3,7 +3,7 @@
 // N is an experiment parameter; replace it with a concrete value.
 
 pre { #a>=0 && #a>=N }
-bsort( | a : []int) {
+bsort(a:[]int | sorted:[]int) {
   var k:int {
     k := 0 ;
     // inv of outer loop
@@ -30,6 +30,7 @@ bsort( | a : []int) {
       } ;
       k := k+1
     }
-  }
+  } ;
+  sorted := a
 }
-post { forall i:: 0<=i && i<#a ==> (forall j:: i<=j && j<#a ==> a[i]<=a[j]) }
+post { forall i:: 0<=i && i<#sorted ==> (forall j:: i<=j && j<#sorted ==> sorted[i]<=sorted[j]) }
