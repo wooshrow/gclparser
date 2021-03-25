@@ -1,21 +1,21 @@
 {-
    A simple interpreter to execute a GCP program. The top level
-   interface is:
+   interface to execute the first procedure in a program is:
 
-      execProgram gcl-program state
+      callProgram gcl-procedure parameters
 
-    You need to give it a state containing all the parameters of the
-    program (its input as well as output params).
+    You need to give it a state, which can usually be empty, and the values
+    of all the input parameters of the procedure (in the right order).
 
-    If the execution ends normally, you get a value of the form "Right t",
-    where t is the program's final state.
+    If the execution ends normally, you get a value of the form "Right res",
+    where res is a list of return values.
 
-    If the program ends by exeception you get "Left (msg,t)", where t is
+    If the procedures ends by exeception you get "Left (msg,t)", where t is
     the last state just before the exeception is thrown, and msg is a
     message describing the kind of excpetion thrown.
 
     The execution can also crash (Haskell calls "error"), which means there
-    is something else is wrong, e.g. the program tries to access a variable
+    is something else is wrong, e.g. the procedures tries to access a variable
     that is not in its current state, or tries to evaluate an expression which
     turns out to be type incorrect.
 
@@ -30,6 +30,7 @@ module GCLInterpreter
 
 where
 
+import Data.List (find)
 import GCLParser.GCLDatatype
 import GCLParser.Parser
 import GCLParser.PrettyPrint
@@ -42,6 +43,7 @@ data Value = Bool Bool
            | Pointer String  -- to represent a pointer/reference. "Pointer p" .. p is a string representing a unique address pointing to some object.
            deriving (Eq,Show)
 
+null_ :: Value
 null_ = Pointer "null"
 
 
@@ -76,7 +78,7 @@ pushVar x value state = (x,value) : state
 -- Pop a variable from the state (removing its first instance)
 --
 popVar :: String -> State -> State
-popVar x [] = []
+popVar _ [] = []
 popVar x ((y,v) : state)
    | x==y = state
    | otherwise = (y,v) : popVar x state
@@ -94,15 +96,16 @@ getLargestArraySize ((_,v) : state) = case v of
 -- given state. Return the ref-name pointing to this new object,
 -- and the new state after adding the object.
 --
+allocateNewObject :: Int -> [(String,Value)] -> (String, State)
 allocateNewObject x [] =  (refname, update refname (Int x) [])
    where
    refname = "__p0"
 allocateNewObject x state = (refname, update refname (Int x) state)
    where
    refname = "__p" ++ show n
-   n = getIndexOfLastObj state + 1
+   n = getIndexOfLastObj state + 1 :: Int
    getIndexOfLastObj [] = -1
-   getIndexOfLastObj ((v,_) : state) = i `max` getIndexOfLastObj state
+   getIndexOfLastObj ((v,_) : s) = i `max` getIndexOfLastObj s
        where
        i = if take 3 v == "__p" then read (drop 3 v) else -1
 
@@ -139,10 +142,11 @@ arrayRead (ArrayBool ab) (Int i) = Bool (ab !! i)
 arrayRead (ArrayInt a)   (Int i) = Int (a !! i)
 arrayRead a i = error ("Incompatible value-types in a[i]: " ++ show a ++ ", " ++ show i)
 
-updateList k x [] = []
+updateList :: Int -> a -> [a] -> [a]
+updateList _ _ [] = []
 updateList k x (y:s)
-   | k==0  = x:s
-   | k>0   = y : updateList (k-1) x s
+   | k<=0  = x:s
+   | otherwise = y : updateList (k-1) x s
 
 arrayUpdate :: Int -> Value -> Value -> Value
 arrayUpdate k (Bool x) (ArrayBool a) = ArrayBool (updateList k x a)
@@ -162,6 +166,13 @@ valueToInt :: Value -> Int
 valueToInt (Int i) = i
 valueToInt e = error ("Expecting an integer value: " ++ show e)
 
+-- default initial value when declaring a local or return variable
+initialValue :: Type -> Value
+initialValue (PType PTInt) = Int 0
+initialValue (PType PTBool) = Bool True
+initialValue (AType PTInt) = ArrayInt []
+initialValue (AType PTBool) = ArrayBool []
+initialValue RefType = null_
 
 
 -- replaceing a varibale v (typically a bounded var) in an expression
@@ -182,7 +193,9 @@ instantiateVarWithInt vname i expr = case expr of
       if (x==vname) then expr else Exists x (instantiateVarWithInt vname i e)
    SizeOf e   -> SizeOf (instantiateVarWithInt vname i e)
    NewStore e -> NewStore (instantiateVarWithInt vname i e)
-   Dereference p -> expr
+   Dereference _ -> expr
+   RepBy a idx e -> RepBy (instantiateVarWithInt vname i a) (instantiateVarWithInt vname i idx) (instantiateVarWithInt vname i e)
+   Cond g e1 e2 -> RepBy (instantiateVarWithInt vname i g) (instantiateVarWithInt vname i e1) (instantiateVarWithInt vname i e2)
 
 -- ==========================================
 -- Eval and Exec functions
@@ -208,7 +221,7 @@ eval state expr = case expr of
     let Int n_ = arraySize a_
     if 0<=i_ && i_ < n_
        then return $ arrayRead a_ (Int i_)
-       else Left "EXC2: illegal array index"
+       else Left ("EXC2: illegal array index: " ++ show expr)
 
   OpNeg e -> do
      e_ <- eval state e
@@ -217,25 +230,23 @@ eval state expr = case expr of
   BinopExpr op e1 e2 -> do
      v1 <- eval state e1
      v2 <- eval state e2
-     if op==Divide
-        then let
-             Int i = v2
-             in
-             if i==0 then Left "EXC1: division by 0"
-                     else return $ intOp (div) v1 v2
-        else return $ case op of
-          And -> boolOp (&&) v1 v2
-          Or  -> boolOp (||) v1 v2
-          Implication -> boolOp (\a b -> not a || b) v1 v2
-          LessThan -> numrelOp (<) v1 v2
-          LessThanEqual -> numrelOp (<=) v1 v2
-          GreaterThan -> numrelOp (>) v1 v2
-          GreaterThanEqual -> numrelOp (>=) v1 v2
-          Equal -> equalOp v1 v2
-          Minus -> intOp (-) v1 v2
-          Plus -> intOp (+) v1 v2
-          Multiply -> intOp (*) v1 v2
-          Alias -> equalOp v1 v2
+     case op of
+        Divide ->
+            let Int i = v2
+            in if i==0 then Left "EXC1: division by 0"
+                       else return $ intOp (div) v1 v2
+        And -> return $ boolOp (&&) v1 v2
+        Or  -> return $ boolOp (||) v1 v2
+        Implication -> return $ boolOp (\a b -> not a || b) v1 v2
+        LessThan -> return $ numrelOp (<) v1 v2
+        LessThanEqual -> return $ numrelOp (<=) v1 v2
+        GreaterThan -> return $ numrelOp (>) v1 v2
+        GreaterThanEqual -> return $ numrelOp (>=) v1 v2
+        Equal -> return $ equalOp v1 v2
+        Minus -> return $ intOp (-) v1 v2
+        Plus -> return $ intOp (+) v1 v2
+        Multiply -> return $ intOp (*) v1 v2
+        Alias -> return $ equalOp v1 v2
   -- becareful, this implementation of Forall and Exists is unsound!
   -- it only quantifies over int in the range of 0 up-to the size of
   -- the largest array currently in the memory.
@@ -270,11 +281,18 @@ eval state expr = case expr of
 
 -- lifted eval
 eval_ :: State -> Expr -> Either (String,State) Value
-eval_ state expr = case eval state expr of
-   Right e -> Right e
-   Left exception -> Left (exception,state)
+eval_ state expr = addStateToError state (eval state expr)
+
+addStateToError :: State -> Either e a -> Either (e,State) a
+addStateToError state = either (\e -> Left (e,state)) Right
+
+dropStateFromError :: Either (e,State) a -> Either e a
+dropStateFromError = either (Left . fst) Right
+
+
 
 -- examples
+s0__ :: [(String, Value)]
 s0__ = [
   ("i", Int 2),
   ("k", Int 0),
@@ -295,11 +313,11 @@ s0__ = [
 -- Finally, an execution may fail to terminate, if the statement
 -- itself contains a non-terminating loop.
 --
-exec :: State -> Stmt -> Either (String,State) State
-exec state stmt = case stmt of
+exec :: [Procedure] -> State -> Stmt -> Either (String,State) State
+exec procs state stmt = case stmt of
    Skip -> return state
    -- assume is ignored:
-   Assume p -> return state
+   Assume _ -> return state
 
    Assert p -> do
        ok <- valueToBool <$> eval_ state p
@@ -326,7 +344,7 @@ exec state stmt = case stmt of
         return state'
 
    AAssign  a index expr -> do
-        i <- valueToInt <$> eval_ state expr
+        i <- valueToInt <$> eval_ state index
         let array = state <@> a
         let Int n = arraySize array
         if 0<=i && i<n
@@ -335,20 +353,34 @@ exec state stmt = case stmt of
                 let array' = arrayUpdate i e array
                 let state' = update a array' state
                 return state'
-           else Left ("EXC2: illegal array index", state)
+           else Left ("EXC2: illegal array index: " ++ show stmt, state)
+
+   Call vars f args ->
+       case find ((== f) . name) procs of
+          Nothing -> error ("Calling undefined procedure: " ++ f)
+          Just proc -> do
+            evaluatedArgs <- traverse (eval_ state) args
+            results <- addStateToError state $ callProcedure procs proc evaluatedArgs
+            if length results /= length vars
+              then
+                error $
+                  f ++ " returned " ++ show (length results) ++ " arguments,"
+                  ++ " expected " ++ show (length vars)
+              else
+                return $ foldr (\(var, value) -> update var value) state (zip vars results)
 
    Seq stmt1 stmt2 -> do
-       intermediateState <- exec state stmt1
-       exec intermediateState stmt2
+       intermediateState <- exec procs state stmt1
+       exec procs intermediateState stmt2
 
    IfThenElse guard stmtThen stmtElse -> do
        g <- valueToBool <$> eval_ state guard
-       if g then exec state stmtThen
-            else exec state stmtElse
+       if g then exec procs state stmtThen
+            else exec procs state stmtElse
 
    While guard body -> do
        g <- valueToBool <$> eval_ state guard
-       if g then exec state (Seq body stmt)
+       if g then exec procs state (Seq body stmt)
             else return state
 
    TryCatch exc body handler ->
@@ -356,7 +388,7 @@ exec state stmt = case stmt of
        -- add exc as a new loc-var
        state1 = pushVar exc (Int 0) state
        in
-       case exec state1 body of
+       case exec procs state1 body of
           Right state2 -> return $ popVar exc state2
           Left (msg,state2) ->
             let
@@ -365,62 +397,85 @@ exec state stmt = case stmt of
                           "EXC2" -> update exc (Int 2) state2
                           _      -> update exc (Int 9) state2
             in
-            case exec state3 handler of
+            case exec procs state3 handler of
                 Right state4      -> Right $ popVar exc state4
-                Left (msg,state4) -> Left (msg, popVar exc state4)
+                Left (msg',state4) -> Left (msg', popVar exc state4)
 
 
    Block vardecls body ->
       let
-      -- default initial value when declaring a local variable:
-      initialVal (PType PTInt) = Int 0
-      initialVal (PType PTBool)= Bool True
-      initialval (AType _)     = error "Declaring a local variable of type array is currently not supported"
-
-      varnames = [ name | VarDeclaration name ty <- vardecls]
+      varnames = [ name | VarDeclaration name _ty <- vardecls]
       -- allocate the declared vars into the state:
-      state2 = foldr (\(VarDeclaration name ty) state_ -> pushVar name (initialVal ty) state_)
+      state2 = foldr (\(VarDeclaration name ty) state_ -> pushVar name (initialValue ty) state_)
                      state
                      vardecls
 
       in
       -- execute the body, then clean-up the vars we just added:
-      case exec state2 body of
+      case exec procs state2 body of
           Right state3      -> Right $ foldr (\v state_ -> popVar v state_) state3  varnames
           Left (msg,state3) -> Left (msg, foldr (\v state_ -> popVar v state_) state3  varnames)
 
+-- Just executes the first procedure of the program.
+execProgram :: Program -> State -> Either (String,State) State
+execProgram (Program procs) state = execProcedure procs state (head procs)
 
---
--- A function to execute a program on  given state. For example,
--- consider a program P(x | y) body, where x is an input parameter,
+execProcedure :: [Procedure] -> State -> Procedure -> Either (String,State) State
+execProcedure procs state p = exec procs state (stmt p)
+
+-- Just calls the first procedure of the program.
+callProgram :: Program -> [Value] -> Either String [Value]
+callProgram (Program procs) = callProcedure procs (head procs)
+
+-- A function to execute a procedure on  given state. For example,
+-- consider a procedure P(x | y) body, where x is an input parameter,
 -- and y is an output parameter. To execute P you need to give it
 -- a state that contains x and y as variables, along with their initial
 -- values.
 -- Just like the execution statements, the result of executing
--- a program is either Right t, where t is the resulting state.
+-- a procedure is either Right t, where t is the resulting state.
 -- The execution might also aborts because of an exception was
--- thrown. In this case the function returns Left msg t, where
--- msg is some string describing the thrown exception, and t
--- is the state just before the exception was thrown.
+-- thrown. In this case the function returns Left msg, where
+-- msg is some string describing the thrown exception.
 --
--- Also, upon termiantion, the initial values of the input parameters
--- are restored. The values of output variables are not restored,
--- of course.
---
-execProgram :: Program -> State -> Either (String,State) State
-execProgram (Program name inputvars outputvars stmt) state =
+callProcedure :: [Procedure] -> Procedure -> [Value] -> Either String [Value]
+callProcedure _ (Procedure name inputVars _ _ _ _) args
+  | length args /= length inputVars =
+      error $
+        "expected " ++ show (length inputVars) ++ " arguments to " ++ name
+        ++ ", got " ++ show (length args)
+callProcedure procs (Procedure name inputVars outputVars pre post stmt) args =
   let
-  inputParamNames   = [ name | VarDeclaration name ty <- inputvars]
-  inputParamsValues = [ (name, state<@>name) | VarDeclaration name ty <- inputvars]
-  -- copy the input variables into the state:
-  state2 = foldr (\(x,val) state_ -> pushVar x val state_) state inputParamsValues
-  in
-  -- execute the program's body, then pop the input-params:
-  case exec state2 stmt of
-     Right state3 -> Right $ foldr (\v state_ -> popVar v state_) state3 inputParamNames
-     Left (msg,state3) -> Left (msg,foldr (\v state_ -> popVar v state_) state3 inputParamNames)
+  inputParamNames = [ var | VarDeclaration var _ <- inputVars]
+  outputParamNames = [ var | VarDeclaration var _ <- outputVars]
+  input = zip inputParamNames args
+  output = [ (var, initialValue ty) | VarDeclaration var ty <- outputVars]
+  in do
+    checkPrecondition input
+    state' <- dropStateFromError $ exec procs (input ++ output) stmt
+    let outputResults = map (\v -> (v, getVar v state')) outputParamNames
+    checkPostcondition (input ++ outputResults)
+    return (map snd outputResults)
+
+  where
+    checkPrecondition state = do
+      ok <- fmap valueToBool <$> traverse (eval state) pre
+      case ok of
+        Just False -> error ("Precondition violation when calling " ++ name ++ ": " ++ show state)
+        _ -> return ()
+
+    checkPostcondition state = do
+      ok <- fmap valueToBool <$> traverse (eval state) post
+      case ok of
+        Just False -> error ("Postcondition violation in " ++ name ++ ": " ++ show state)
+        _ -> return ()
+
+    getVar v s = case lookup v s of
+      Just value -> value
+      Nothing -> error ("function " ++ name ++ " did not return " ++ v)
 
 -- tests
+test_ :: IO ()
 test_ = do
    gcl <- parseGCLfile "../examples/benchmark/bsort.gcl"
    let (Right prg) = gcl

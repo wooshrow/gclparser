@@ -6,10 +6,12 @@
 
 // N is an experiment parameter; replace it with a concrete value.
 
+pre {
+  #a>0 && #a=N 
+  && ~(x == null)
+  && (forall i:: 0<=i && i<#a ==> a[i]>0)
+}
 min(a:[]int, x:ref, u:ref | m:ref) {
-  assume #a>0 && #a=N 
-         && ~(x == null)
-         && (forall i:: 0<=i && i<#a ==> a[i]>0) ;
   var k:int {
      k := 0 ;
      while k<#a do {
@@ -20,6 +22,6 @@ min(a:[]int, x:ref, u:ref | m:ref) {
                         else { skip } ;
         k := k+1
      }
-  } ;
-  assert (forall i:: 0<=i && i<#a ==> m.val <= a[i])
+  }
 }
+post { forall i:: 0<=i && i<#a ==> m.val <= a[i] }

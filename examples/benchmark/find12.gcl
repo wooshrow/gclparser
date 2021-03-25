@@ -12,12 +12,12 @@
 // N is an experiment parameter; replace it with a concrete value.
 
 
+pre {
+  #a>0 && #a=N
+  && (forall i:: 0<=i && i<#a ==> a[i]>0)
+  && (forall i:: 0<=i && i<N  ==> a[i]=1)
+}
 find12(a:[]int | z:int) {
-   // N is an experiment parameter
-   assume #a>0 && #a=N
-          && (forall i:: 0<=i && i<#a ==> a[i]>0)
-          && (forall i:: 0<=i && i<N  ==> a[i]=1) ;
-
    var k:int, r:int {
      k := 0 ;
      z := -1 ;
@@ -45,6 +45,6 @@ find12(a:[]int | z:int) {
 
        k := k+1
      }
-   } ;
-   assert z>0
+   }
 }
+post { z>0 }

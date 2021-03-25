@@ -18,6 +18,8 @@ import Debug.Trace
     identifier       { TIdent     $$     }
     intvalue         { TIntValue  $$     }
     boolvalue        { TBoolValue $$     }
+    pre              { TPre              }
+    post             { TPost             }
     skip             { TSkip             }
     assert           { TAssert           }
     assume           { TAssume           }
@@ -83,22 +85,24 @@ import Debug.Trace
 -- | Program parsing
 
 PProgram    :: { Program }
---             : PConditions identifier popen PVarDeclarations bar PVarDeclarations pclose copen PStatements cclose PConditions PProcedures
---                { Program $1 $2 $4 $6 $9 $12 $11 }
-             : identifier popen PVarDeclarations bar PVarDeclarations pclose copen PStatements cclose 
-                { Program $1 $3 $5 $8 }
+             : PProcedures
+                { Program $1 }
 
---PProcedures :: { [Procedure] }
---             : PProcedure PProcedures { $1 : $2 }
---             | PProcedure             { [$1] }
---             |                        { [] }
+PProcedures :: { [Procedure] }
+             : PProcedure PProcedures { $1 : $2 }
+             | PProcedure             { [$1] }
 
---PProcedure :: { Procedure }
---              : PConditions identifier popen PVarDeclarations bar PVarDeclarations pclose PConditions
---                 { Procedure $2 $4 $6 $1 $8 }
+PProcedure :: { Procedure }
+            : PPreCondition identifier popen PVarDeclarations bar PVarDeclarations pclose copen PStatements cclose PPostCondition
+                 { Procedure $2 $4 $6 $1 $11 $9 }
 
---PConditions :: { Expr }
---             : copen PExpr cclose { $2 }
+PPreCondition :: { Maybe Expr }
+               : pre copen PExpr cclose { Just $3 }
+               |                        { Nothing }
+
+PPostCondition :: { Maybe Expr }
+                : post copen PExpr cclose { Just $3 }
+                |                         { Nothing }
 
 PVarDeclarations :: { [VarDeclaration] }
                   : PVarDeclaration comma PVarDeclarations { $1 : $3 }
@@ -123,10 +127,10 @@ PStatements :: { Stmt }
              : PStatements semicolon PStatements { Seq $1 $3 }
              | PStatement                        { $1 }
 
---PArguments :: { [Expr] }
---            : PExpr comma PArguments { $1 : $3 }
---            | PExpr                  { [$1] }
---            |                        { [] }
+PArguments :: { [Expr] }
+            : PExpr comma PArguments { $1 : $3 }
+            | PExpr                  { [$1] }
+            |                        { [] }
 
 PStatement  :: { Stmt }
              : skip                                                   { Skip }
@@ -139,7 +143,7 @@ PStatement  :: { Stmt }
              | identifier sopen PExpr sclose assign PExpr             { AAssign $1 $3 $6 }
              | identifier assign PExpr                                { Assign $1 $3 }
              | identifier dot val assign PExpr                        { DrefAssign $1 $5 }
---           | popen PIdentifiers pclose assign identifier popen PArguments pclose { Call $2 $7 $5 }
+             | popen PIdentifiers pclose assign identifier popen PArguments pclose { Call $2 $5 $7 }
 
 PIdentifiers :: { [String] }
               : identifier comma PIdentifiers { $1 : $3 }

@@ -1,0 +1,86 @@
+// Quicksort, using procedure calls and recursion.
+
+pre { #a>=0 }
+quicksort(a:[]int | sorted:[]int) {
+  (sorted) := qsort(a, 0, #a - 1)
+}
+post {
+  #sorted=#a
+  && (forall i:: 0<=i && i<#sorted ==> (forall j:: i<=j && j<#sorted ==> sorted[i]<=sorted[j]))
+}
+
+pre { #a>=0 && 0<=lo && hi<#a }
+qsort(a:[]int, lo:int, hi:int | sorted:[]int) {
+  sorted := a ;
+  if lo < hi then {
+    var p:int {
+      (sorted, p) := partition(sorted, lo, hi) ;
+      (sorted) := qsort(sorted, lo, p-1) ;
+      (sorted) := qsort(sorted, p+1, hi)
+    }
+  } else {
+    skip  // we're done
+  }
+}
+post {
+  #sorted = #a
+  // range is sorted
+  && (forall i:: lo<=i && i<=hi ==> (forall j:: i<=j && j<=hi ==> sorted[i]<=sorted[j]))
+  // range comes from original array
+  && (forall i:: lo<=i && i<=hi ==> (exists j:: lo<=j && j<=hi && sorted[i]=a[j]))
+  // rest is unchanged
+  && (forall i:: 0<=i && i<lo ==> sorted[i]=a[i])
+  && (forall i:: hi<i && i<#a ==> sorted[i]=a[i])
+}
+
+pre { #a>=0 && 0<=lo && lo<=hi && hi<#a }
+partition(a:[]int, lo:int, hi:int | partitioned:[]int, pos_pivot:int) {
+  partitioned := a ;
+  var i:int, j:int, pivot:int {
+    pivot := partitioned[hi] ;
+    i := lo ;
+    j := lo ;
+    while j <= hi do {
+      if partitioned[j] < pivot then {
+        (partitioned) := swap(partitioned, i, j) ;
+        i := i+1
+      } else {
+        skip
+      } ;
+      j := j+1
+    } ;
+    (partitioned) := swap(partitioned, i, hi) ;
+    pos_pivot := i
+  }
+}
+post {
+  #partitioned=#a
+  && lo<=pos_pivot && pos_pivot<=hi
+  // range below pos_pivot is <= pivot
+  && (forall i:: lo<=i && i<pos_pivot ==> partitioned[i]<=partitioned[pos_pivot])
+  // range above pos_pivot is >= pivot
+  && (forall i:: pos_pivot<i && i<=hi ==> partitioned[i]>=partitioned[pos_pivot])
+  // range comes from original array
+  && (forall i:: lo<=i && i<=hi ==> (exists j:: lo<=j && j<=hi && partitioned[i]=a[j]))
+  // rest is unchanged
+  && (forall i:: 0<=i && i<lo ==> partitioned[i]=a[i])
+  && (forall i:: hi<i && i<#a ==> partitioned[i]=a[i])
+}
+
+pre { #a>0 && 0<=i && i<#a && 0<=j && j<#a }
+swap(a:[]int, i:int, j:int | out:[]int) {
+  out := a ;
+  var tmp:int {
+      tmp  := out[i] ;
+      out[i] := out[j] ;
+      out[j] := tmp
+  }
+}
+post {
+  #out=#a
+  // elements are swapped
+  && out[i]=a[j]
+  && out[j]=a[i]
+  // rest is unchanged
+  && (forall k:: 0<=k && k<#a && ~(k=i) && ~(k=j) ==> out[k]=a[k])
+}

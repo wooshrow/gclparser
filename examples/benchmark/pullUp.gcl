@@ -4,9 +4,8 @@
 
 // N is an experiment parameter; replace it with a concrete value.
 
+pre { #a>=2 && #a=N && step>0 }
 pullUp(step:int , a:[]int | b:[]int) {
-   // N is an experiment parameter
-   assume #a>=2 && #a=N && step>0 ;
 
    if a[0] >= a[1]
       then { a[1] := a[0] + step }
@@ -21,7 +20,7 @@ pullUp(step:int , a:[]int | b:[]int) {
        k := k+1
      }
    } ;
-   b := a ;
-   // error; should be >= b[0]+#b-1. Change: bug removed.
-   assert b[N-1] >= b[0] + #b - 1
+   b := a
 }
+// error; should be >= b[0]+#b-1. Change: bug removed.
+post { b[N-1] >= b[0] + #b - 1 }

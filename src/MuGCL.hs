@@ -85,12 +85,12 @@ data MutationType = NO_MUTATION |
 f $> (a,x) = (a, f x)
 
 mutateExpr :: Expr -> [(MutationType,Expr)]
-mutateExpr expr = filter (\m -> fst m /= NO_MUTATION) $ mutate expr
+mutateExpr = filter (\m -> fst m /= NO_MUTATION) . mutate
    where
    mutate expr = case expr of
-      Var v   -> [(NO_MUTATION, expr)]
-      LitI x  -> [(NO_MUTATION, expr)]
-      LitB x  -> [(NO_MUTATION, expr)]
+      Var _   -> [(NO_MUTATION, expr)]
+      LitI _  -> [(NO_MUTATION, expr)]
+      LitB _  -> [(NO_MUTATION, expr)]
       LitNull -> [(NO_MUTATION, expr)]
       Parens e ->  [ Parens $> e' | e' <- mutate e]
       ArrayElem a i ->
@@ -207,21 +207,22 @@ mutateExpr expr = filter (\m -> fst m /= NO_MUTATION) $ mutate expr
 
       NewStore e -> map (NewStore $>) $ mutate e
 
-      Dereference p -> [(NO_MUTATION, expr)]
+      Dereference _ -> [(NO_MUTATION, expr)]
 
 mutateStmt :: Stmt -> [(MutationType,Stmt)]
-mutateStmt stmt = filter (\m -> fst m /= NO_MUTATION) $ mutate stmt
+mutateStmt = filter (\m -> fst m /= NO_MUTATION) . mutate
   where
   mutate stmt = case stmt of
      Skip     -> [(NO_MUTATION, stmt)]
-     Assert e -> [(NO_MUTATION, stmt)]
-     Assume e -> [(NO_MUTATION, stmt)]
+     Assert _ -> [(NO_MUTATION, stmt)]
+     Assume _ -> [(NO_MUTATION, stmt)]
      Assign  x e    -> map (Assign x $>) $ mutateExpr e
      DrefAssign x e -> map (DrefAssign x $>) $ mutateExpr e
      AAssign x i e -> map ((\i_ -> AAssign x i_ e) $>) (mutateExpr i)
                       ++
                       map ((\e_ -> AAssign x i e_) $>) (mutateExpr e)
 
+     Call vars name args -> map (Call vars name $>) (mutateEach mutateExpr args)
      -- we will not drop parts of Seq as that might remove some Asserts
      Seq stmt1 stmt2 -> map ((\s1_ -> Seq s1_ stmt2) $>) (mutate stmt1)
                         ++
@@ -253,13 +254,24 @@ mutateStmt stmt = filter (\m -> fst m /= NO_MUTATION) $ mutate stmt
         m1 : group1 ++ group2
 
 
-mutateProgram :: Program -> [(MutationType,Program)]
-mutateProgram (Program name inputParams outputParams body)
+mutateEach :: (a -> [(t, a)]) -> [a] -> [(t, [a])]
+mutateEach _ [] = []
+mutateEach mutateOne (x : xs) =
+    map ((: xs) $>) (mutateOne x)
+    ++ map ((x :) $>) (mutateEach mutateOne xs)
+
+mutateProgram :: Program -> [(MutationType, Program)]
+mutateProgram = map (Program $>) . mutateEach mutateProcedure . procedures
+
+
+mutateProcedure :: Procedure -> [(MutationType, Procedure)]
+mutateProcedure (Procedure name inputParams outputParams pre post body)
    =
-   map (Program name inputParams outputParams $>) $ mutateStmt body
+   map (Procedure name inputParams outputParams pre post $>) $ mutateStmt body
 
 
 -- tests
+test_ :: IO ()
 test_ = do
    gcl <- parseGCLfile "../examples/benchmark/bsort.gcl"
    let (Right prg) = gcl

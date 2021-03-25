@@ -5,6 +5,8 @@ data Token
     | TIntValue  Int
     | TBoolValue Bool
 --    | TArray     Int
+    | TPre
+    | TPost
     | TNull
     | TSkip
     | TAssert

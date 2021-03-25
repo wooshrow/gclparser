@@ -15,5 +15,6 @@ import MuGCL
 echoTestParser :: String -> IO()
 echoTestParser filename = do
    gcl <- parseGCLfile filename
-   let (Right prg) = gcl
-   putStrLn . ppProgram2String $ prg
+   case gcl of
+    Right prg -> putStrLn . ppProgram2String $ prg
+    Left err -> error $ "failed parsing " ++ filename ++ ": " ++ err

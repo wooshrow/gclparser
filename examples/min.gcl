@@ -1,6 +1,6 @@
 // This returns the minimum of two integer. Supposedly valid.
 min(x:int, y:int | z:int) {
   z := x ;
-  if y < x then { z := y } else { skip } ;
-  assert ((z = x) || (z = y)) && (z <= x) && (z <= y)
+  if y < x then { z := y } else { skip }
 }
+post { ((z = x) || (z = y)) && (z <= x) && (z <= y) }

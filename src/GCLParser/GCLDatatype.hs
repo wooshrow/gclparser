@@ -1,6 +1,6 @@
 module GCLParser.GCLDatatype where
-    
--- import Data.List
+
+import Data.List (intercalate)
 
 type Verbose = Bool
 
@@ -25,22 +25,24 @@ data VarDeclaration
     = VarDeclaration String Type
     deriving (Show)
 
-{-
-data Procedure 
-    = Procedure String [VarDeclaration] [VarDeclaration] Expr Expr
+data Program
+    = Program
+        { procedures :: [Procedure]
+        }
     deriving (Show)
--}
 
-data Program 
-    = Program { 
---                pre    :: Expr, 
-              name   :: String 
-              , input  :: [VarDeclaration]
-              , output :: [VarDeclaration]
-              , stmt   :: Stmt
---              , procs  :: [Procedure]
---              , post   :: Expr 
-              } 
+data Procedure
+    = Procedure
+        { name          :: String
+        , input         :: [VarDeclaration]
+        , output        :: [VarDeclaration]
+        , preCondition  :: Maybe Expr
+          -- ^ Can refer to input variables only.
+        , postCondition :: Maybe Expr
+          -- ^ Can refer to input and output variables only.
+          -- Input variables will be at the state when the procedure was called.
+        , stmt          :: Stmt
+        }
     deriving (Show)
 
 data Stmt
@@ -50,12 +52,12 @@ data Stmt
     | Assign     String           Expr   
     | AAssign    String           Expr   Expr  
     | DrefAssign String           Expr
+    | Call       [String]         String [Expr]
     | Seq        Stmt             Stmt   
     | IfThenElse Expr             Stmt   Stmt     
     | While      Expr             Stmt   
     | Block      [VarDeclaration] Stmt   
     | TryCatch   String           Stmt   Stmt
---    | Call       [String]         [Expr] String
 
 instance Show Stmt where
     show Skip                     = "skip"
@@ -64,12 +66,12 @@ instance Show Stmt where
     show (Assign var e)           = var ++ " := " ++ show e 
     show (DrefAssign var e)       = var ++ ".val := " ++ show e 
     show (AAssign var i e)        = var ++ "[" ++ show i ++ "]" ++ " := " ++ show e
+    show (Call vars f args)       = "(" ++ intercalate "," vars ++ ") := " ++ f ++ "(" ++ (intercalate "," . map show) args ++ ")"
     show (Seq s1 s2)              = show s1 ++ ";" ++ show s2 
     show (IfThenElse gaurd s1 s2) = "if " ++ show gaurd ++ " then " ++ show s1 ++ " else " ++ show s2
     show (While gaurd s)          = "while " ++ show gaurd ++ " do {" ++ show s ++ "}"
     show (Block vars s)           = "var " ++ show vars ++ " {" ++ show s ++ "}"
     show (TryCatch e s1 s2)         = "try { " ++ show s1 ++ " } catch(" ++ e ++ "){ " ++ show s2 ++ " }"
---    show (Call vars args f)       = "(" ++ intercalate "," vars ++ ") := " ++ "(" ++ (intercalate "," . map show) args ++ ")"
     
 -----------------------------------------------------------------------------
 -- Expressions

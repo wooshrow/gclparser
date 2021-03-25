@@ -2,10 +2,8 @@
 
 // N is an experiment parameter; replace it with a concrete value.
 
+pre { #a>=N && #a>=0 && (exists k:: 0<=k && k<#a && a[k]=x) }
 memberOf(x:int, a:[]int | found:bool) {
-   // N is an experiment parameter
-   assume #a>=N && #a>=0
-          && (exists k:: 0<=k && k<#a && a[k]=x) ; 
    var k:int {
      k := 0 ;
      found := false ;
@@ -15,6 +13,6 @@ memberOf(x:int, a:[]int | found:bool) {
           else { skip } ;
        k := k+1
      }
-   } ;
-   assert found 
-}  
+   }
+}
+post { found }
