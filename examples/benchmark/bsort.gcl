@@ -2,7 +2,7 @@
 
 // N is an experiment parameter; replace it with a concrete value.
 
-bsort( | a : []int) {
+bsort( a : []int | b : []int) {
   assume #a>=0 && #a>=N ;
   var k:int {
     k := 0 ;
@@ -29,6 +29,6 @@ bsort( | a : []int) {
       } ;
       k := k+1 }
   } ;
-
-  assert (forall i:: 0<=i && i<#a ==> (forall j:: i<=j && j<#a ==> a[i]<=a[j]))
+  b := a ;
+  assert (forall i:: 0<=i && i<#b ==> (forall j:: i<=j && j<#b ==> b[i]<=b[j]))
 }
