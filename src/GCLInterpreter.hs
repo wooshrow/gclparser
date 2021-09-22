@@ -375,7 +375,7 @@ exec state stmt = case stmt of
       -- default initial value when declaring a local variable:
       initialVal (PType PTInt) = Int 0
       initialVal (PType PTBool)= Bool True
-      initialval (AType _)     = error "Declaring a local variable of type array is currently not supported"
+      initialVal (AType _)     = error "Declaring a local variable of type array is currently not supported"
 
       varnames = [ name | VarDeclaration name ty <- vardecls]
       -- allocate the declared vars into the state:
