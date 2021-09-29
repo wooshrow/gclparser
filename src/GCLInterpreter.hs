@@ -208,7 +208,7 @@ eval state expr = case expr of
     let Int n_ = arraySize a_
     if 0<=i_ && i_ < n_
        then return $ arrayRead a_ (Int i_)
-       else Left "EXC2: illegal array index"
+       else Left ("EXC2: illegal array index: " ++ show expr)
 
   OpNeg e -> do
      e_ <- eval state e
@@ -326,7 +326,7 @@ exec state stmt = case stmt of
         return state'
 
    AAssign  a index expr -> do
-        i <- valueToInt <$> eval_ state expr
+        i <- valueToInt <$> eval_ state index
         let array = state <@> a
         let Int n = arraySize array
         if 0<=i && i<n
@@ -335,7 +335,7 @@ exec state stmt = case stmt of
                 let array' = arrayUpdate i e array
                 let state' = update a array' state
                 return state'
-           else Left ("EXC2: illegal array index", state)
+           else Left ("EXC2: illegal array index: " ++ show stmt, state)
 
    Seq stmt1 stmt2 -> do
        intermediateState <- exec state stmt1
