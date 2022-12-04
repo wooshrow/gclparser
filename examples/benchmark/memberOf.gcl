@@ -15,7 +15,7 @@ memberOf(x:int, a:[]int | found:bool) {
           else { skip } ;
        k := k+1
      }
+     // adding few more checks:
+     assert found && k>=0 && k=#a && k>=N ;
    } ;
-   // adding few more checks:
-   assert found && k>=0 && k==#a && k>=N
 }
