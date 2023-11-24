@@ -12,18 +12,24 @@ To compile the tool, the following package are required:
 * pretty.
 
 #### Compilation
-To compile the library, run the command `cabal build`.
+To compile the library, run the command `> cabal build` from your console.
 
 #### Running/testing from interpreter
 
-After building (see above), you can run ghci from ./src, passing the path to where
-Cabal puts the generated files, and passing relevant language options:
+After building (see above), you can run:
 
 ```
-ghci -i../dist/build -XNamedFieldPuns
+> cabal repl
 ```
 
-From there you can load packages e.g. `:l GCLParser.Parser` and try out functions defined there in the interpreter.
+This will run `ghci` (Haskell interpreter) and also load the module `GCLParser.Parser`. From there you can load other packages using the usual `:l <modulename>` command.
+
+The file `.ghci` in the project root contains ghci options that will also be turned on. Currently it only contains:
+
+```
+-XNamedFieldPuns
+```
+
 
 #### Usage
 
