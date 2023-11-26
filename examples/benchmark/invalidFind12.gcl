@@ -1,0 +1,56 @@
+// This version has a post-condition that is wrong.
+// This is meant to check if your depth-parameter K
+// is enough to catch the violation.
+
+// This program checks if there are two consecutive elements a[i] and a[i{+}1] such that
+//
+//      2 / (a[i] + a[i+1]) < 1
+//
+// if so, it returns with z=2, and else with z=1.
+// If the division throws an exception, the program returns with z=0.
+
+// The pre-condition that a contains only positive integers is intentionally added.
+// Under this pre-condition the above division will not throw an exception; we'll see
+// if your verifier can exploit this.
+
+// N is an experiment parameter; replace it with a concrete value.
+
+
+find12(a:[]int | z:int) {
+   // N is an experiment parameter
+   assume #a>0 && #a=N
+          && (forall i:: 0<=i && i<#a ==> a[i]>0)
+          && (forall i:: 0<=i && i<N  ==> a[i]=1) ;
+
+   var k:int, r:int {
+     k := 0 ;
+     z := -1 ;
+     while k<#a && (z<0 || (z=1)) do {
+       z := -1 ;
+       try {
+          r := a[k] + a[k+1]
+       }
+       catch(e) {
+          if e=2 // array-range-exception
+             then { z := 1 }
+             else { skip   }
+       } ;
+       try {
+          r := 2/r // idea: can we first check if r=0 is feasible?
+       }
+       catch(e) {
+          if e=1 // division by zero
+            then { z := 0 }
+            else { skip   }
+       } ;
+       if z<0 && r < 1
+            then { z := 2 }
+            else { z := 1 } ;
+
+       k := k+1
+     }
+   } ;
+   //assert z>0
+   // deliberate invalid post-cond
+   assert z<=0
+}
