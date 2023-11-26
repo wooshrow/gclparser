@@ -1,3 +1,7 @@
+// This version has a post-condition that is wrong.
+// This is meant to check if your depth-parameter K
+// is enough to catch the violation.
+
 // This contrived program modifies an array a such that each $a[k+1] is
 // at least equal to a[k]+1. So, at the end we expect the last element
 // of a to be >= a[0]+#a-1.
@@ -22,5 +26,7 @@ pullUp(step:int , a:[]int | b:[]int) {
      }
    } ;
    b := a ;
-   assert b[N-1] >= b[0] + #b - 1
+   //assert b[N-1] >= b[0] + #b - 1
+   // deliberately wrong post:
+   assert b[N-1] >= b[0] + #b 
 }

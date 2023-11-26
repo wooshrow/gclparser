@@ -1,5 +1,6 @@
-// A wrong version of memberOf, to check if you
-// can catch the violation.
+// This version has a post-condition that is wrong.
+// This is meant to check if your depth-parameter K
+// is enough to catch the violation.
 
 // The program checks if x is an element of the array a.
 
