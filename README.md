@@ -90,6 +90,12 @@ Unfortunately almost none. But if some of you know how to make Happy produces a 
 
 See in `/examples`
 
+#### Z3
+
+* [A note on how to install Z3 for your Haskell project.](./docs/aboutInstallingZ3.md)
+* Some examples of how to use Z3 from Haskell: in `examples/examplesHaskellZ3`.
+
+
 #### Credits
 
 Many thanks to Stefan Koppier for providing the initial implementation of the parser.

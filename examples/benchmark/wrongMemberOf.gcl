@@ -1,0 +1,26 @@
+// A wrong version of memberOf, to check if you
+// can catch the violation.
+
+// The program checks if x is an element of the array a.
+
+// N is an experiment parameter; replace it with a concrete value.
+
+memberOf(x:int, a:[]int | found:bool) {
+   // N is an experiment parameter
+   assume #a>=N && #a>=0
+          && (exists k:: 0<=k && k<#a && a[k]=x) ;
+   var k:int {
+     k := 0 ;
+     found := false ;
+     while k<#a do { // deliberately iterating till the end of array
+       if a[k]=x
+          then { found := true }
+          else { skip } ;
+       k := k+1
+     } ;
+     // adding few more checks:
+     // assert found && k>=0 && k=#a && k>=N
+     // using a wrong assertion:
+     assert ~found && k>=0 && k=#a && k>=N
+   }
+}
