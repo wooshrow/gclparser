@@ -95,6 +95,7 @@ See in `/examples`
 * [A note on how to install Z3 for your Haskell project.](./docs/aboutInstallingZ3.md)
 * Some examples of how to use Z3 from Haskell: in `examples/examplesHaskellZ3`.
 
+#### [Papers for your Related Work section](./docs/papers.md)
 
 #### Credits
 
