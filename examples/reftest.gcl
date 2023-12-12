@@ -1,0 +1,9 @@
+// If you implement the references-optional, this is a simple
+// test program to check if you logic for handling dereferences
+// is correct.
+reftest(x:ref | y:ref) {
+  assume ~(x==null) && ~(y==null) && x==y  ;
+  x.val := 1 ;
+  //assert x==y && x.val > 0
+  assert x==y && x.val > 0 && y.val > 0
+}
