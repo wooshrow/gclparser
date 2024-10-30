@@ -1,0 +1,24 @@
+bsort(a:[]int | b:[]int) {
+    assume ((#a >= 0) && (#a >= N));
+    var k:int {
+        k := 0;
+        assert (((0 <= k) && (k <= #a)) && (forall i:: (((0 <= i) && (i < k)) ==> (forall j:: (((i <= j) && (j < #a)) ==> (a[i] <= a[j]))))));
+        while (k < #a) do {
+            var m:int,tmp:int {
+                m := (#a - 1);
+                assert ((((((0 <= k) && (k <= #a)) && (forall i:: (((0 <= i) && (i < k)) ==> (forall j:: (((i <= j) && (j < #a)) ==> (a[i] <= a[j])))))) && (k <= m)) && (m < #a)) && (forall j:: (((m <= j) && (j < #a)) ==> (a[m] <= a[j]))));
+                while (k < m) do {
+                    if (a[m] < a[(m - 1)]) then {
+                        tmp := a[m];
+                        a[m] := a[(m - 1)];
+                        a[(m + 1)] := tmp
+                    } else {
+                        skip
+                    };
+                    m := (m - 1)
+                }};
+            k := (k + 1)
+        }};
+    b := a;
+    assert (forall i:: (((0 <= i) && (i < #b)) ==> (forall j:: (((i <= j) && (j < #b)) ==> (b[i] <= b[j])))))
+}

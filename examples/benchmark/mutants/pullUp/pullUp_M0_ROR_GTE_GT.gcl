@@ -1,0 +1,20 @@
+pullUp(step:int,a:[]int | b:[]int) {
+    assume (((#a >= 2) && (#a = N)) && (step > 0));
+    if (a[0] > a[1]) then {
+        a[1] := (a[0] + step)
+    } else {
+        skip
+    };
+    var k:int {
+        k := 1;
+        while (k < (#a - 1)) do {
+            if (a[k] >= a[(k + 1)]) then {
+                a[(k + 1)] := (a[k] + step)
+            } else {
+                skip
+            };
+            k := (k + 1)
+        }};
+    b := a;
+    assert (b[(N - 1)] >= ((b[0] + #b) - 1))
+}

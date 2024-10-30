@@ -1,0 +1,16 @@
+divByN(x:int | divisible:bool) {
+    assume (x > 1);
+    var k:int {
+        k := 1;
+        divisible := false;
+        while ((k <= x) && ~divisible) do {
+            var i:int {
+                i := 0;
+                while (i < N) do {
+                    i := (i + 1)
+                };
+                divisible := ~((i * k) = x)};
+            k := (k + 1)
+        }};
+    assert (divisible = (exists m:: (((0 < m) && (m <= x)) && ((m * N) = x))))
+}

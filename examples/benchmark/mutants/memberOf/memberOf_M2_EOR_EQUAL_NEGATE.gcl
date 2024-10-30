@@ -1,0 +1,15 @@
+memberOf(x:int,a:[]int | found:bool) {
+    assume (((#a >= N) && (#a >= 0)) && (exists k:: (((0 <= k) && (k < #a)) && (a[k] = x))));
+    var k:int {
+        k := 0;
+        found := false;
+        while (k < #a) do {
+            if ~(a[k] = x) then {
+                found := true
+            } else {
+                skip
+            };
+            k := (k + 1)
+        };
+        assert (((found && (k >= 0)) && (k = #a)) && (k >= N))}
+}

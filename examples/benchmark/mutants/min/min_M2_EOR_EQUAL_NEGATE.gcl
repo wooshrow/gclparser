@@ -1,0 +1,25 @@
+min(a:[]int,x:ref,u:ref | m:ref) {
+    assume ((((#a > 0) && (#a = N)) && ~((x == null))) && (forall i:: (((0 <= i) && (i < #a)) ==> (a[i] > 0))));
+    var k:int {
+        k := 0;
+        while (k < #a) do {
+            u := new(a[k]);
+            if ~(k = 0) then {
+                m := u
+            } else {
+                skip
+            };
+            if (u.val <= m.val) then {
+                m := u
+            } else {
+                u.val := (u.val + 1)
+            };
+            if ~((m == null)) then {
+                x.val := (m.val + 1)
+            } else {
+                skip
+            };
+            k := (k + 1)
+        }};
+    assert (forall i:: (((0 <= i) && (i < #a)) ==> (m.val <= a[i])))
+}

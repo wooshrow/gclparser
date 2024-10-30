@@ -1,0 +1,32 @@
+find12(a:[]int | z:int) {
+    assume ((((#a > 0) && (#a = N)) && (forall i:: (((0 <= i) && (i < #a)) ==> (a[i] > 0)))) && (forall i:: (((0 <= i) && (i < N)) ==> (a[i] = 1))));
+    var k:int,r:int {
+        k := 0;
+        z := -1;
+        while ((k < #a) && (((z < 0) || ((z = 1))))) do {
+            z := -1;
+            try{ 
+                r := (a[k] + a[k])}
+            catch(e){
+                if (e = 2) then {
+                    z := 1
+                } else {
+                    skip
+                }};
+            try{ 
+                r := (2 / r)}
+            catch(e){
+                if (e = 1) then {
+                    z := 0
+                } else {
+                    skip
+                }};
+            if ((z < 0) && (r < 1)) then {
+                z := 2
+            } else {
+                z := 1
+            };
+            k := (k + 1)
+        }};
+    assert (z > 0)
+}
