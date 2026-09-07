@@ -88,7 +88,7 @@ Unfortunately almost none. But if some of you know how to make Happy produces a 
 
 #### GCL examples and verification benchmark
 
-See in `/examples`
+See in `/examples`. Pre-generated mutants of some of the examples can be found in `/examples/benchmark/mutants`.
 
 #### Z3
 
