@@ -12,7 +12,11 @@ To compile the tool, the following package are required:
 * pretty.
 
 #### Compilation
-To compile the library, run the command `> cabal build` from your console.
+
+First modify the cabal-file `GCLparser.cabal`. Set the options `extra-lib-dirs` and
+`extra-include-dirs` to point to the directory where your z3 libs and include-headers are located, e.g. `tools/z3-4.8.8/bin`. If you don't want to bother with z3 right away, just comment out the options.
+
+To compile the GCL-Parser library, run the command `> cabal build` from your console.
 
 #### Running/testing from interpreter
 
